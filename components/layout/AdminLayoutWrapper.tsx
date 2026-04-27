@@ -3,16 +3,19 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, Users, BookOpen, FileCheck, MessageSquare, Megaphone, Settings, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Users, BookOpen, FileCheck, MessageSquare, Megaphone, Settings, LogOut, ClipboardList, FolderKanban, UserCog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 const LINKS = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Students', href: '/admin/students', icon: Users },
+  { name: 'Applications', href: '/admin/applications', icon: ClipboardList, badge: 3 },
   { name: 'Courses', href: '/admin/courses', icon: BookOpen },
   { name: 'Assignments', href: '/admin/assignments', icon: FileCheck, badge: 5 },
   { name: 'Messages', href: '/admin/messages', icon: MessageSquare, badge: 1, badgeClass: 'bg-gold text-primary' },
+  { name: 'Documents', href: '/admin/documents', icon: FolderKanban },
+  { name: 'Admin Users', href: '/admin/users', icon: UserCog },
   { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
 ];
 

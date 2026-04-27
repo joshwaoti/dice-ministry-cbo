@@ -1,52 +1,56 @@
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { BookOpenCheck, Clock3, GraduationCap } from 'lucide-react';
+import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
+import { courseCatalog } from '@/lib/portal-data';
+import { StatusPill } from '@/components/portal/StatusPill';
+import { Button } from '@/components/ui/button';
 
 export default function StudentCourses() {
   return (
-    <div className="space-y-8 max-w-full">
-      <div>
-         <h1 className="text-3xl font-display font-bold text-primary mb-2 text-wrap">My Courses</h1>
-         <p className="text-muted text-wrap">Pick up where you left off.</p>
-      </div>
+    <div className="space-y-8 max-w-full pb-10">
+      <PortalPageHeader
+        eyebrow="Student Portal"
+        title="My Courses"
+        description="Every enrolled course has a visible overview, next-step guidance, and a route into modules and lessons."
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Mock Enrolled Course */}
-        <Card className="flex flex-col overflow-hidden w-full max-w-full">
-          <div className="h-40 bg-gray-200 shrink-0" style={{backgroundImage: 'url(https://picsum.photos/seed/course1/600/400)', backgroundSize: 'cover'}} />
-          <CardContent className="p-6 flex-1 flex flex-col min-w-0 break-words">
-            <div className="flex justify-between items-center mb-4">
-              <div className="bg-teal/10 text-teal font-bold px-3 py-1 rounded-full text-xs uppercase shrink-0">12 Units</div>
-              <div className="text-sm font-bold text-primary shrink-0">45%</div>
+        {courseCatalog.map((course) => (
+          <div key={course.id} className="flex flex-col overflow-hidden rounded-[24px] border border-border bg-white shadow-sm">
+            <div className="h-40 shrink-0 bg-[linear-gradient(135deg,rgba(10,25,49,0.92),rgba(13,115,119,0.84))] p-6 text-white">
+              <div className="flex items-start justify-between gap-3">
+                <StatusPill label={`${course.unitCount} units`} tone="info" />
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em]">
+                  {course.progress}% complete
+                </span>
+              </div>
+              <h2 className="mt-7 font-display text-2xl font-bold leading-tight">{course.title}</h2>
+              <p className="mt-2 max-w-sm text-sm text-white/75">{course.synopsis}</p>
             </div>
-            <div className="w-full bg-surface rounded-full h-2 mb-4 overflow-hidden shrink-0">
-              <div className="bg-accent h-2 rounded-full" style={{ width: '45%' }}></div>
+            <div className="flex flex-1 flex-col p-6">
+              <div className="mb-4 h-2 overflow-hidden rounded-full bg-surface">
+                <div className="h-full rounded-full bg-accent" style={{ width: `${course.progress}%` }} />
+              </div>
+              <div className="grid gap-3 text-sm text-primary/80">
+                <p className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-accent" /> Duration: {course.duration}</p>
+                <p className="flex items-center gap-2"><GraduationCap className="h-4 w-4 text-accent" /> Mentor: {course.mentor}</p>
+                <p className="flex items-center gap-2"><BookOpenCheck className="h-4 w-4 text-accent" /> Next up: {course.nextUnit}</p>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {course.badges.map((badge) => (
+                  <span key={badge} className="rounded-full bg-accent/8 px-3 py-1 text-xs font-medium text-primary">{badge}</span>
+                ))}
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <Button asChild variant="outline">
+                  <Link href={`/student/courses/${course.id}`}>View Course</Link>
+                </Button>
+                <Button asChild variant="primary">
+                  <Link href={`/student/courses/${course.id}/learn`}>Continue Learning</Link>
+                </Button>
+              </div>
             </div>
-            <CardTitle className="text-xl mb-3 text-wrap break-words leading-tight">Discipleship Foundations</CardTitle>
-            <p className="text-muted flex-grow mb-6 text-sm text-wrap overflow-hidden">Continue with Unit 3: Building Character.</p>
-            <Button asChild className="w-full mt-auto" variant="primary">
-              <Link href="/student/courses/c1/m3/u1">Continue Learning</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Second Course */}
-        <Card className="flex flex-col overflow-hidden w-full max-w-full">
-          <div className="h-40 bg-gray-200 shrink-0" style={{backgroundImage: 'url(https://picsum.photos/seed/course2/600/400)', backgroundSize: 'cover'}} />
-          <CardContent className="p-6 flex-1 flex flex-col min-w-0 break-words">
-            <div className="flex justify-between items-center mb-4">
-              <div className="bg-teal/10 text-teal font-bold px-3 py-1 rounded-full text-xs uppercase shrink-0">8 Units</div>
-              <div className="text-sm font-bold text-primary shrink-0">15%</div>
-            </div>
-            <div className="w-full bg-surface rounded-full h-2 mb-4 overflow-hidden shrink-0">
-              <div className="bg-accent h-2 rounded-full" style={{ width: '15%' }}></div>
-            </div>
-            <CardTitle className="text-xl mb-3 text-wrap break-words leading-tight">Peer Mentoring &amp; Life Skills</CardTitle>
-            <p className="text-muted flex-grow mb-6 text-sm text-wrap overflow-hidden">Continue with Unit 1: Discovering Purpose.</p>
-            <Button asChild className="w-full mt-auto" variant="primary">
-              <Link href="/student/courses/c2/m1/u1">Continue Learning</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import { Plus_Jakarta_Sans, Space_Grotesk, Geist } from 'next/font/google';
 import './globals.css';
 import { cn } from "@/lib/utils";
+import { AppProviders } from '@/components/providers/AppProviders';
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -25,7 +26,9 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={cn("scroll-smooth", jakarta.variable, space.variable, "font-sans", geist.variable)}>
-      <body className="font-sans antialiased bg-white text-[#111827]" suppressHydrationWarning>{children}</body>
+      <body className="font-sans antialiased bg-white text-[#111827]" suppressHydrationWarning>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

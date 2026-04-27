@@ -1,20 +1,23 @@
 'use client';
 
-import { motion } from 'motion/react';
 import Link from 'next/link';
-import { PlayCircle, Flame, Clock, CheckCircle2, ChevronRight, Award, Bell } from 'lucide-react';
+import { Award, Bell, CheckCircle2, Clock, Flame, FolderUp, MessageSquareText, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { courseCatalog } from '@/lib/portal-data';
+import { useToast } from '@/components/ui/toast';
 
 export default function StudentDashboard() {
+  const { toast } = useToast();
+  const featured = courseCatalog[0];
+
   return (
     <div className="pb-12">
-      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-display font-bold text-primary mb-1">Welcome back, Sarah!</h1>
           <p className="text-muted text-lg">You&apos;re making great progress. Keep it up.</p>
         </div>
-        
-        {/* Daily Streak */}
+
         <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 px-4 py-2 rounded-xl text-accent">
           <Flame className="w-5 h-5 fill-accent stroke-accent" />
           <span className="font-bold">14 Day Streak!</span>
@@ -23,66 +26,78 @@ export default function StudentDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Jump Back In */}
           <section>
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Jump Back In</h2>
             <div className="bg-primary text-white rounded-2xl p-8 relative overflow-hidden shadow-lg border border-primary/20">
-              <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: 'url("https://picsum.photos/seed/learn/800/400")'}} />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(232,98,26,0.3),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)]" />
               <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-transparent" />
-              
+
               <div className="relative z-10">
-                <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block">Discipleship 101</span>
-                <h3 className="text-3xl font-display font-bold mb-2">The Grace of God</h3>
-                <p className="text-white/80 mb-8 max-w-md">Unit 3 • Module 1. You are 12 minutes into this 25 minute video lesson.</p>
-                
+                <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block">{featured.title}</span>
+                <h3 className="text-3xl font-display font-bold mb-2">{featured.nextUnit}</h3>
+                <p className="text-white/80 mb-8 max-w-md">Module 1 • You are 12 minutes into this 25 minute guided lesson, with notes saved in your profile.</p>
+
                 <div className="flex items-center gap-4">
                   <Button variant="white" size="lg" className="rounded-xl group" asChild>
-                    <Link href="/student/courses/1/learn">
+                    <Link href={`/student/courses/${featured.id}/learn`}>
                       <PlayCircle className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                       Resume Lesson
                     </Link>
                   </Button>
-                  <span className="text-sm font-medium text-white/70">45% Course Complete</span>
+                  <span className="text-sm font-medium text-white/70">{featured.progress}% Course Complete</span>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Enrolled Courses */}
           <section>
             <div className="flex justify-between items-end mb-4">
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted">My Courses</h2>
               <Link href="/student/courses" className="text-sm font-medium text-accent hover:underline">View All</Link>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link href="/student/courses/2" className="bg-white p-5 rounded-2xl border border-border hover:shadow-md hover:border-accent/30 transition-all group">
-                <h3 className="font-display font-bold text-lg text-primary mb-1 group-hover:text-accent transition-colors">Career Guidance</h3>
-                <p className="text-sm text-muted mb-4">Module 2: Discovering Gifts</p>
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
-                  <div className="bg-teal-500 h-2 rounded-full" style={{ width: '20%' }}></div>
-                </div>
-                <div className="flex justify-between text-xs text-muted font-medium">
-                  <span>20% Complete</span>
-                </div>
-              </Link>
-              
-              <Link href="/student/courses/3" className="bg-white p-5 rounded-2xl border border-border hover:shadow-md hover:border-accent/30 transition-all group">
-                <h3 className="font-display font-bold text-lg text-primary mb-1 group-hover:text-accent transition-colors">Digital Literacy</h3>
-                <p className="text-sm text-muted mb-4">Module 4: Spreadsheets</p>
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
-                  <div className="bg-teal-500 h-2 rounded-full" style={{ width: '85%' }}></div>
-                </div>
-                <div className="flex justify-between text-xs text-muted font-medium">
-                  <span>85% Complete</span>
-                </div>
-              </Link>
+              {courseCatalog.slice(1).map((course) => (
+                <Link key={course.id} href={`/student/courses/${course.id}`} className="bg-white p-5 rounded-2xl border border-border hover:shadow-md hover:border-accent/30 transition-all group">
+                  <h3 className="font-display font-bold text-lg text-primary mb-1 group-hover:text-accent transition-colors">{course.title}</h3>
+                  <p className="text-sm text-muted mb-4">Next up: {course.nextUnit}</p>
+                  <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                    <div className="bg-teal-500 h-2 rounded-full" style={{ width: `${course.progress}%` }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted font-medium">
+                    <span>{course.progress}% Complete</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Student Tools</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => toast({ title: 'Upload panel ready', description: 'Student document submission is available from your assignments page.', tone: 'info' })}
+                className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md"
+              >
+                <div className="mb-4 inline-flex rounded-2xl bg-accent/10 p-3 text-accent"><FolderUp className="h-5 w-5" /></div>
+                <h3 className="font-display text-lg font-bold text-primary">Upload coursework</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Static UI for document upload, submission rules, and confirmation toasts is already wired.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => toast({ title: 'Mentor inbox available', description: 'Open Messages to continue the conversation with your mentor or instructor.', tone: 'success' })}
+                className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md"
+              >
+                <div className="mb-4 inline-flex rounded-2xl bg-primary/10 p-3 text-primary"><MessageSquareText className="h-5 w-5" /></div>
+                <h3 className="font-display text-lg font-bold text-primary">Mentor communication</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Direct messaging and notification surfaces are visible across the portal.</p>
+              </button>
             </div>
           </section>
         </div>
 
         <div className="space-y-8">
-          {/* Deadlines & Alerts */}
           <section>
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Up Next</h2>
             <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
@@ -94,11 +109,11 @@ export default function StudentDashboard() {
                   <h4 className="font-bold text-gray-900">Career Reflection Essay</h4>
                   <p className="text-sm text-red-600 font-medium my-1">Due Today • 11:59 PM</p>
                   <Button variant="outline" size="sm" className="mt-2 text-xs border-red-200 hover:bg-red-50" asChild>
-                    <Link href="#">Submit Now</Link>
+                    <Link href="/student/assignments">Submit Now</Link>
                   </Button>
                 </div>
               </div>
-              
+
               <div className="p-4 border-b border-border flex items-start gap-4">
                 <div className="bg-blue-50 text-blue-600 p-2 rounded-lg shrink-0 mt-0.5">
                   <Bell className="w-5 h-5" />
@@ -122,7 +137,6 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          {/* Achievments */}
           <section>
             <div className="flex justify-between items-end mb-4">
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Recent Badges</h2>
