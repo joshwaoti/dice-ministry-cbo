@@ -1,0 +1,294 @@
+
+
+
+DICE MINISTRY CBO
+Complete Website Copy
+All Pages · All Sections · Verbatim
+
+
+Source website:  https://www.diceministry.org
+Compiled by:  Zitrion Technologies  ·  Joshua Otieno  ·  +254 715 621 748
+Prepared for:  DICE Ministry CBO website revamp project
+
+
+This document contains every word of copy found on the DICE Ministry CBO website across all 10 pages, extracted verbatim for use in the website revamp. Copy is organized page by page, section by section, exactly as it appears on the live site.
+
+Pages included:
+1. Home  ·  2. About Us  ·  3. Our History  ·  4. Our Belief  ·  5. Our Work  ·  6. Ignite  ·  7. Our Team  ·  8. Support Us  ·  9. Contact Us  ·  10. Footer (Global)
+
+
+
+Hero Section
+Main Tagline
+Empowering Teenagers & Young Adults
+
+Quick Links Row
+Link 1
+Our Programs
+Link 2
+Student Services
+Link 3
+Apply for Ignite
+
+Testimonial Block
+
+Feature Cards (3 CTAs)
+Card 1 — Heading
+Our Mission
+Card 1 — Subtext
+Our Goal, Vision & Commitment
+Card 2 — Heading
+Ignite
+Card 2 — Subtext
+Our Discipleship Program
+Card 3 — Heading
+Get Involved
+Card 3 — Subtext
+Help Make a Change
+
+Partners Section
+Section Heading
+Our Partners
+Partners Listed
+Engaged International  ·  Reign Ministries  ·  GPC The Broncity
+
+
+
+
+Note: The /about page returned a 404 during extraction — the content below is from the live site's observable text and was captured in the original audit.
+
+Our Story
+Section Heading
+Our Story
+Body Copy
+DICE Ministry CBO (Discipleship In Context of Evangelism) was founded in March 2008 by Maurice Agunda. What began as a small discipleship program at Baptist Chapel in Lucky Summer, Nairobi, has grown into a multi-faceted ministry serving teenagers and young adults across the city.
+
+Mission & Vision
+Mission Statement
+We exist to mobilize resources and design programs that promote godliness, skillfulness, and empowerment.
+Vision Statement
+We see a generation of young people who know God, are skillful, and empowered.
+
+
+
+
+Page Title
+Heading
+Our Journey
+
+Section 1 — Origins
+Heading
+(Introductory narrative)
+Body Copy
+DICE Ministry CBO was founded in the early 2000s. In 2004, Maurice Agunda noticed a troubling pattern—many young people were coming to faith with passion and excitement, but over time, that initial fire for Jesus would fade. The desire to pray, attend church, and boldly share their faith would slowly diminish, leaving them feeling disconnected and discouraged.
+Body Copy (continued)
+In 2007, Maurice received a clear vision: to create a ministry that would provide a strong, lasting foundation for youth and new believers. This ministry would serve as a guiding framework—one that captures both the cost and the joy of true discipleship, and helps young people grow upward in their faith with purpose and consistency.
+
+Section 2 — Partnership with Baptist Chapel
+Sub-heading
+Partnership with Baptist Chapel
+Body Copy
+In 2008, Maurice partnered with Baptist Chapel in Lucky Summer to launch a 9-month discipleship training program for teenagers and young adults within the church. He utilized the New Life Training Curriculum developed by Campus Crusade for Christ (now Life Ministry Kenya). The program proved to be a great success, igniting spiritual growth and deeper commitment among the youth. Building on this momentum, Maurice and his team expanded the training in 2009, running additional discipleship programs at both Baptist Chapel and Highridge Baptist Church in Korogocho.
+
+Section 3 — Discipleship in High Schools
+Sub-heading
+Discipleship in High Schools
+Body Copy
+In 2010, we launched our high school ministry at St. Mary's Keris High School in Lucky Summer, marking a significant step in our mission to reach the next generation. The following year, we secured our current office space to support the growing work. Through these weekly discipleship sessions, students were encouraged to grow in faith, develop strong values, and navigate life with a clear sense of purpose rooted in Christ.
+
+Section 4 — Inaugural SURGE (now Ignite)
+Sub-heading
+Inaugural SURGE (now Ignite)
+Body Copy
+In 2012, we launched our first SURGE program—a 9-month discipleship training initiative designed to help young people deepen their relationship with God, build a strong foundation for their future, discover their unique gifts and calling, and develop essential leadership skills. The program included training in Discipleship and Evangelism, Peer Education and Life Skills, and Basic Computer Skills. Additionally, students had the opportunity to choose one specialized course from Basic Music Skills, Graphic Design, or Video Editing and Production.
+
+Section 5 — Short-term Missions
+Sub-heading
+Short-term Missions
+Body Copy
+In 2015, we began our partnership with Reign Ministries, and since then, we've hosted various Royal Servants and Kairos mission trips. This collaboration has provided valuable opportunities for us to engage in short-term missions, allowing our students to gain hands-on experience in sharing their faith and discipling others.
+
+
+
+
+Page Title
+Heading
+Statement of Faith
+
+7 Doctrinal Statements
+
+
+
+
+
+
+
+
+
+
+
+Page Title
+Section Heading
+What We Do
+
+Program 1 — High School Ministry
+Program Title
+High School Ministry
+Body Copy
+We're actively engaged in weekly discipleship programs at local high schools. We focus on empowering and mentoring students to build Christ-centered foundations that shape their academics, relationships, and future paths.
+
+Program 2 — Missions Hosting
+Program Title
+Missions Hosting
+Body Copy
+We partner with like-minded Christian organizations, both locally and internationally, to engage in short-term mission projects. This is a vital part of our commitment to help fulfill the Great Commission by demonstrating God's love in action.
+
+Program 3 — Ignite
+Program Title
+Ignite (formerly SURGE)
+Body Copy
+A 6-month discipleship & mentorship program for high school graduates. Our students are trained in Discipleship & Evangelism, Peer Education & Life Skills, and Basic Computer Skills.
+CTA Link Text
+Learn More
+
+
+
+
+Page Title
+Heading
+Ignite (formerly SURGE)
+
+Program Overview
+Paragraph 1
+IGNITE is a 6-month fully-sponsored program designed to equip recent high school graduates for success in campus life, community involvement, or the marketplace. The program focuses on empowering young people to deepen their relationship with God, establish a strong foundation for their future, identify their unique gifts and calling, and develop essential leadership skills.
+Paragraph 2
+At the heart of IGNITE is the practice of spending daily time alone with God, combined with weekly experiences of prayer, Bible study, and worship. Participants are also challenged through life-changing activities that push them beyond their comfort zones. Additionally, they have the chance to engage with guest speakers from diverse professional backgrounds, gaining valuable insights into various fields.
+Paragraph 3
+A typical IGNITE session includes lectures on Discipleship Foundations, Peer Mentoring & Practical Life Skills, and Basic Computer Skills.
+Paragraph 4
+Ultimately, IGNITE aims to cultivate a generation that is godly, empowered, and skillful—transforming learning into real-life application and impact.
+
+Ignite Courses — Section Heading
+Heading
+Ignite Courses
+
+Course 1
+Course Title
+Discipleship Foundations
+Course Description
+Covers basic concepts on cultivating our relationship with God and discipleship concepts.
+
+Course 2
+Course Title
+Peer Mentoring & Practical Life Skills
+Course Description
+Covers basic concepts on personality traits, career choice, and healthy relationships.
+
+Course 3
+Course Title
+Basic Computer Skills
+Course Description
+Covers eight basic Microsoft Office packages.
+
+
+
+
+Page Title
+Heading
+Meet The Team
+
+Team Members
+
+
+
+
+Page Heading
+Main Heading
+Let's Make A Change
+Intro Paragraph
+Your gifts provide resources and training for teenagers and young adults. Thank you for choosing to partner with us. Here are some ways you can donate:
+
+Donation Method 1 — Bank
+Method Label
+Bank Deposit
+Bank Details
+Co-operative Bank
+Thika Road Mall Branch
+A/c Name: DICE Ministry CBO
+A/c No.: 01100178076001
+
+Donation Method 2 — Online
+Method Label
+Online
+Supporting Copy
+Make a tax deductible donation.
+CTA Button Text
+Click to Give
+Link
+https://donorbox.org/dice-ministries-kenya
+
+Donation Method 3 — M-Pesa
+Method Label
+MPESA
+M-Pesa Details
+Paybill - 400200
+A/c No. - 6458
+
+
+
+
+Page Title
+Heading
+Get in Touch
+
+Contact Form
+Intro Copy
+Contact Form — You can contact us using the form below, and we'll get back to you as soon as possible. Or, if you prefer, you may contact us using the contact information below the form.
+Form Fields
+First name  ·  Last name  ·  Email  ·  Write a message
+Submit Button Text
+Submit
+Form Success Message
+Thank you for reaching out to DICE Ministry CBO. We'll get back to you as soon as possible!
+
+
+
+
+Footer Logo / Org Name
+Logo Text
+DICE MINISTRY CBO
+
+Footer Address
+Street / Building
+Baba Dogo - Lucky Summer Road
+Kanyoro House (opp. The Oasis Gym)
+3rd Floor
+Postal Address
+P.O. Box 15368-00400 Nairobi
+
+Footer Contact Info
+Phone Numbers
++254 725 248 788
++254 115 447 886
+Email
+diceministrykenya@gmail.com
+
+Footer Social Links
+Platforms
+Facebook  →  https://www.facebook.com/DICEMinistryKenya
+Instagram  →  https://www.instagram.com/diceministrykenya/
+YouTube  →  https://www.youtube.com/@diceministrykenya8253
+
+Footer Copyright
+Copyright Line
+© 2025 by DICE Ministry CBO.
+
+
+
+
+The table below summarises all key copy strings by page for fast lookup during development.
+
+
+
+End of Document
+Zitrion Technologies  ·  Joshua Otieno  ·  +254 715 621 748
