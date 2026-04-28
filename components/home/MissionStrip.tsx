@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import supportImage from '@/images/dice_II.avif';
+import discipleshipImage from '@/images/diceministry/discipleship-foundation.avif';
 
 export function MissionStrip() {
   return (
@@ -47,7 +47,7 @@ export function MissionStrip() {
             className="relative h-[400px] overflow-hidden rounded-3xl shadow-2xl md:h-[500px]"
           >
             <Image
-              src={supportImage}
+              src={discipleshipImage}
               alt="DICE Ministry students learning together"
               fill
               className="object-cover"

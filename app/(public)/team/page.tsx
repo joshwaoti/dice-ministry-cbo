@@ -1,5 +1,13 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
+import mauricePhoto from '@/images/diceministry/Maurice Agunda.jpg';
+import christinePhoto from '@/images/diceministry/Christine Sharon.jpg';
+import salimPhoto from '@/images/diceministry/Salim Kwatsima.jpg';
+import rovertPhoto from '@/images/diceministry/Rovert Ochieng.jpg';
+import faithPhoto from '@/images/diceministry/Faith Mugale.jpg';
+import pstAlbertPhoto from '@/images/diceministry/Pst Albert Shitakwa.jpg';
+import janePhoto from '@/images/diceministry/Jane Watetu.jpg';
+import zipporahPhoto from '@/images/diceministry/Zipporah Ntabo.jpg';
 
 export const metadata: Metadata = {
   title: 'Our Team | DICE Ministry',
@@ -7,14 +15,14 @@ export const metadata: Metadata = {
 
 export default function TeamPage() {
   const team = [
-    { name: "Maurice Agunda", role: "Founder & President", photo: "https://picsum.photos/seed/t1/200/200" },
-    { name: "Christine Sharon", role: "Executive Team Member", photo: "https://picsum.photos/seed/t2/200/200" },
-    { name: "Salim Kwatsima", role: "Executive Team Member", photo: "https://picsum.photos/seed/t3/200/200" },
-    { name: "Robert Ochieng", role: "Executive Team Member", photo: "https://picsum.photos/seed/t4/200/200" },
-    { name: "Faith Magale", role: "Executive Team Member", photo: "https://picsum.photos/seed/t5/200/200" },
-    { name: "Pst. Albert Shitakwa", role: "Patron", photo: "https://picsum.photos/seed/t6/200/200" },
-    { name: "Jane Watetu", role: "Discipleship Trainer", photo: "https://picsum.photos/seed/t7/200/200" },
-    { name: "Zipporah Ntabo", role: "Discipleship Trainer", photo: "https://picsum.photos/seed/t8/200/200" }
+    { name: 'Maurice Agunda', role: 'Founder & President', photo: mauricePhoto },
+    { name: 'Christine Sharon', role: 'Executive Team Member', photo: christinePhoto },
+    { name: 'Salim Kwatsima', role: 'Executive Team Member', photo: salimPhoto },
+    { name: 'Rovert Ochieng', role: 'Executive Team Member', photo: rovertPhoto },
+    { name: 'Faith Mugale', role: 'Executive Team Member', photo: faithPhoto },
+    { name: 'Pst Albert Shitakwa', role: 'Patron', photo: pstAlbertPhoto },
+    { name: 'Jane Watetu', role: 'Discipleship Trainer', photo: janePhoto },
+    { name: 'Zipporah Ntabo', role: 'Discipleship Trainer', photo: zipporahPhoto },
   ];
 
   return (

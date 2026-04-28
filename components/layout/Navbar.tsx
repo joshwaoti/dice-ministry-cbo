@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, HeartHandshake, GraduationCap, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -32,13 +32,16 @@ export function Navbar() {
       href: '/about',
       subLinks: [
         { name: 'Our Story', href: '/about' },
+        { name: 'Our History', href: '/about/history' },
         { name: 'What We Believe', href: '/about/belief' },
         { name: 'Alumni', href: '/alumni' },
         { name: 'Our Team', href: '/team' },
       ]
     },
     { name: 'Our Work', href: '/our-work' },
-    { name: 'Ignite', href: '/ignite' },
+    { name: 'Ignite', href: '/ignite', subLinks: [{ name: 'Program Overview', href: '/ignite' }, { name: 'Course Library', href: '/course-library' }] },
+    { name: 'Our Team', href: '/team' },
+    { name: 'Support Us', href: '/support' },
     { name: 'Contact Us', href: '/contact' },
   ];
 
@@ -109,8 +112,9 @@ export function Navbar() {
 
           {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden p-2 text-primary"
+            className="md:hidden rounded-full bg-white/10 p-2 text-primary backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open navigation menu"
           >
             <Menu className={cn("w-6 h-6", transparentMode ? "text-white" : "text-primary")} />
           </button>
@@ -160,6 +164,20 @@ export function Navbar() {
                     )}
                   </div>
                 ))}
+              </div>
+              <div className="mt-8 grid grid-cols-3 gap-3 rounded-2xl bg-surface p-4">
+                <Link href="/course-library" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
+                  <GraduationCap className="h-5 w-5" />
+                  Course Library
+                </Link>
+                <Link href="/team" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
+                  <Users className="h-5 w-5" />
+                  Our Team
+                </Link>
+                <Link href="/support" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
+                  <HeartHandshake className="h-5 w-5" />
+                  Support
+                </Link>
               </div>
               <div className="mt-auto pt-8 flex flex-col gap-4">
                 <Button variant="outline" size="lg" className="w-full" asChild onClick={() => setMobileMenuOpen(false)}>

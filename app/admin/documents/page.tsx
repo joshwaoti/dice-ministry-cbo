@@ -31,7 +31,40 @@ export default function AdminDocumentsPage() {
         <div className="border-b border-border px-6 py-5">
           <h2 className="font-display text-2xl font-bold text-primary">Document Index</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="block space-y-4 p-4 md:hidden">
+          {documents.map((document) => (
+            <article key={document.id} className="rounded-2xl border border-border p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-primary">{document.name}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-accent">{document.id}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  <LockKeyhole className="h-3.5 w-3.5" /> {document.access}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-surface p-3 text-sm text-muted-foreground">
+                  <p className="font-semibold text-primary">Category</p>
+                  <p className="mt-1">{document.category}</p>
+                </div>
+                <div className="rounded-2xl bg-surface p-3 text-sm text-muted-foreground">
+                  <p className="font-semibold text-primary">Owner</p>
+                  <p className="mt-1">{document.owner}</p>
+                </div>
+                <div className="rounded-2xl bg-surface p-3 text-sm text-muted-foreground sm:col-span-2">
+                  <p className="font-semibold text-primary">Updated</p>
+                  <p className="mt-1">{document.updated}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => toast({ title: 'Metadata updated', description: `${document.name} can now be reclassified or relinked.`, tone: 'info' })}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => toast({ title: 'Download started', description: `${document.name} is downloading.`, tone: 'info' })}><Download className="mr-2 h-4 w-4" /> Download</Button>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-full text-left">
             <thead className="bg-surface">
               <tr className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">

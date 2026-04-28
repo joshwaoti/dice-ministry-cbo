@@ -1,58 +1,51 @@
 import { Metadata } from 'next';
-import { BeliefGrid } from '@/components/public/BeliefGrid';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { wixPublicContent } from '@/lib/wix-public-content';
 
 export const metadata: Metadata = {
   title: 'What We Believe | DICE Ministry',
 };
 
 export default function BeliefPage() {
+  const belief = wixPublicContent.belief;
+
   return (
     <>
-      <section className="relative h-[50vh] min-h-[400px] flex items-center justify-center overflow-hidden bg-primary">
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-overlay"
-          style={{ backgroundImage: 'url("https://picsum.photos/seed/belief/1920/1080")' }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/50 to-primary" />
-        
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-16">
-          <h1 className="text-4xl md:text-6xl font-display font-bold text-white mb-6">What We Believe</h1>
-          <p className="text-xl md:text-2xl text-white/90">The convictions that ground everything we do.</p>
+      <section className="bg-primary pt-32 pb-20 text-center text-white">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.32em] text-gold">{belief.eyebrow}</p>
+          <h1 className="mb-6 text-4xl font-display font-bold md:text-6xl">{belief.title}</h1>
+          <p className="text-xl text-white/88 md:text-2xl">{belief.subtitle}</p>
         </div>
       </section>
 
-      <section className="py-24 bg-surface relative -mt-8 rounded-t-3xl border-t border-border z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <BeliefGrid />
+      <section className="bg-surface py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {belief.statements.map((statement, index) => (
+              <article key={statement.title} className="flex h-full flex-col rounded-[26px] border border-border bg-white p-8 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent/12 text-sm font-bold text-accent">
+                    {index + 1}
+                  </span>
+                  <h2 className="text-2xl font-display font-bold text-primary">{statement.title}</h2>
+                </div>
+                <p className="text-base leading-8 text-muted-foreground">{statement.body}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
-      
-      {/* Scripture pull-quote with slow background pan */}
+
       <section className="py-32 relative overflow-hidden bg-[#0A1931]">
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-10 animate-pan-slow pointer-events-none"
-          style={{ backgroundImage: 'url("https://picsum.photos/seed/scripture/1920/1080")', backgroundSize: '120%' }}
-        />
-        <style dangerouslySetInnerHTML={{__html: `
-          @keyframes pan-slow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-          .animate-pan-slow {
-            animation: pan-slow 60s ease-in-out infinite;
-          }
-        `}} />
         <div className="max-w-4xl mx-auto px-4 relative z-10 text-center">
           <div className="text-[#F4A623] text-8xl font-display leading-none mb-4">&quot;</div>
           <blockquote className="text-3xl md:text-5xl font-display font-medium text-white leading-tight mb-8">
-            Don&apos;t let anyone look down on you because you are young, but set an example for the believers in speech, in conduct, in love, in faith and in purity.
+            Don&apos;t let anyone look down on you because you are young, but set an example for the believers in speech,
+            in conduct, in love, in faith and in purity.
           </blockquote>
-          <cite className="block text-[#F4A623] font-bold text-xl uppercase tracking-widest not-italic">
-            1 Timothy 4:12
-          </cite>
+          <cite className="block text-[#F4A623] font-bold text-xl uppercase tracking-widest not-italic">1 Timothy 4:12</cite>
         </div>
       </section>
 

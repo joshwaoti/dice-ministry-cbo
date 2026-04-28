@@ -72,7 +72,65 @@ export default function AdminStudentsPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="block md:hidden space-y-4 p-4">
+            {students.map((student) => (
+              <article key={student.id} className="rounded-2xl border border-border p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+                    {student.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-primary">{student.name}</p>
+                        <p className="text-sm text-muted-foreground">{student.email}</p>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-accent">{student.id}</p>
+                      </div>
+                      <StatusPill
+                        label={student.status}
+                        tone={student.status === 'Active' ? 'success' : student.status === 'At Risk' ? 'warning' : 'info'}
+                      />
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl bg-surface p-3 text-sm text-muted-foreground">
+                        <p className="font-semibold text-primary">Cohort</p>
+                        <p className="mt-1">{student.cohort}</p>
+                      </div>
+                      <div className="rounded-2xl bg-surface p-3 text-sm text-muted-foreground">
+                        <p className="font-semibold text-primary">Track</p>
+                        <p className="mt-1">{student.track}</p>
+                      </div>
+                      <div className="rounded-2xl bg-surface p-3 text-sm text-muted-foreground sm:col-span-2">
+                        <p className="font-semibold text-primary">Mentor</p>
+                        <p className="mt-1">{student.mentor}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-2.5 overflow-hidden rounded-full bg-surface">
+                        <div className="h-full rounded-full bg-accent" style={{ width: `${student.progress}%` }} />
+                      </div>
+                      <span className="text-xs font-semibold text-primary">{student.progress}% complete</span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={`/admin/students/${student.id}`}>
+                          <Eye className="mr-2 h-4 w-4" /> View
+                        </Link>
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => toast({ title: `${student.name} updated`, description: 'Student enrollment fields are ready for editing.', tone: 'info' })}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => toast({ title: `${student.name} flagged`, description: 'Mentor review task added to the at-risk queue.', tone: 'warning' })}>
+                        <ShieldBan className="mr-2 h-4 w-4" /> Flag
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full text-left">
               <thead className="bg-surface">
                 <tr className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">

@@ -7,7 +7,7 @@ export default function StudentMessages() {
   const { toast } = useToast();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-[10rem])] lg:min-h-[600px] w-full max-w-full bg-white rounded-2xl border border-border shadow-sm overflow-hidden lg:flex-row">
+    <div className="flex h-[calc(100vh-10rem)] min-h-[620px] w-full max-w-full flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm lg:flex-row">
       <div className="w-full lg:w-80 border-b lg:border-r border-border flex flex-col shrink-0 lg:h-full h-[50vh] min-h-[300px]">
         <div className="p-4 border-b border-border bg-surface shrink-0">
           <h2 className="font-bold text-primary">Conversations</h2>

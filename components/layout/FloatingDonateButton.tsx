@@ -3,13 +3,9 @@
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { DonationSheet } from './DonationSheet';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export function FloatingDonateButton() {
   const [isOpen, setIsOpen] = useState(false);
-  const isMobile = useIsMobile();
-
-  if (!isMobile) return null;
 
   return (
     <>
@@ -30,18 +26,17 @@ export function FloatingDonateButton() {
           z-index: -1;
         }
       `}} />
-      <div className="fixed bottom-6 right-5 z-[100] transition-transform duration-300">
+      <div className="fixed bottom-5 right-4 z-[100] transition-transform duration-300 sm:bottom-6 sm:right-5 lg:bottom-8 lg:right-8">
         <button
           onClick={() => setIsOpen(true)}
-          className="relative w-14 h-14 bg-accent text-white rounded-full flex items-center justify-center shadow-lg hover:bg-accent/90 focus:outline-none donate-pulse"
+          className="donate-pulse relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition hover:scale-[1.03] hover:bg-accent/90 focus:outline-none lg:h-16 lg:w-16"
+          aria-label="Open donation methods"
         >
-          <Heart className="w-6 h-6 fill-white" />
+          <Heart className="h-6 w-6 fill-white lg:h-7 lg:w-7" />
         </button>
       </div>
 
-      {isOpen && (
-        <DonationSheet isOpen={isOpen} onClose={() => setIsOpen(false)} />
-      )}
+      {isOpen && <DonationSheet isOpen={isOpen} onClose={() => setIsOpen(false)} />}
     </>
   );
 }

@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import supportImage from '@/images/dice_II.avif';
+import igniteImage from '@/images/diceministry/ignite.webp';
 
 export function IgniteFeature() {
   return (
@@ -55,7 +55,7 @@ export function IgniteFeature() {
             className="relative h-[400px] lg:h-[500px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10"
           >
             <Image
-              src={supportImage}
+              src={igniteImage}
               alt="Ignite Program students"
               fill
               className="object-cover"

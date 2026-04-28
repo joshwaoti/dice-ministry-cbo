@@ -1,60 +1,60 @@
 import Link from 'next/link';
-import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Youtube } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="bg-primary text-white py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          
+    <footer className="bg-primary py-16 text-white">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_1fr_1fr_1.1fr]">
           <div className="space-y-6">
             <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center text-white font-display font-bold text-xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-xl font-bold text-white">
                 D
               </div>
-              <span className="font-display font-bold text-xl tracking-tight">
-                DICE Ministry
-              </span>
+              <span className="font-display text-xl font-bold tracking-tight">DICE Ministry</span>
             </Link>
             <p className="text-white/70">
-              Discipleship In Context of Evangelism. Empowering teenagers and young adults in Kenya to maximize their God-given potential.
+              Discipleship In Context of Evangelism. Empowering teenagers and young adults in Kenya to maximize their
+              God-given potential.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent transition-colors">
-                <Facebook className="w-5 h-5" />
+              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
+                <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent transition-colors">
-                <Instagram className="w-5 h-5" />
+              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
+                <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-accent transition-colors">
-                <Youtube className="w-5 h-5" />
+              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
+                <Youtube className="h-5 w-5" />
               </a>
             </div>
           </div>
 
-          <div>
-            <h3 className="font-display font-bold text-lg mb-6 text-gold">Quick Links</h3>
-            <ul className="space-y-4">
-              <li><Link href="/" className="text-white/70 hover:text-white transition-colors">Home</Link></li>
-              <li><Link href="/about" className="text-white/70 hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/our-work" className="text-white/70 hover:text-white transition-colors">Our Work</Link></li>
-              <li><Link href="/team" className="text-white/70 hover:text-white transition-colors">Our Team</Link></li>
-              <li><Link href="/contact" className="text-white/70 hover:text-white transition-colors">Contact</Link></li>
-            </ul>
+          <div className="grid grid-cols-2 gap-8 lg:contents">
+            <div>
+              <h3 className="mb-6 text-lg font-bold text-gold">Quick Links</h3>
+              <ul className="space-y-4">
+                <li><Link href="/" className="text-white/70 transition-colors hover:text-white">Home</Link></li>
+                <li><Link href="/about" className="text-white/70 transition-colors hover:text-white">About Us</Link></li>
+                <li><Link href="/our-work" className="text-white/70 transition-colors hover:text-white">Our Work</Link></li>
+                <li><Link href="/team" className="text-white/70 transition-colors hover:text-white">Our Team</Link></li>
+                <li><Link href="/contact" className="text-white/70 transition-colors hover:text-white">Contact</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="mb-6 text-lg font-bold text-gold">Ignite Program</h3>
+              <ul className="space-y-4">
+                <li><Link href="/ignite" className="text-white/70 transition-colors hover:text-white">Program Overview</Link></li>
+                <li><Link href="/ignite/courses" className="text-white/70 transition-colors hover:text-white">Course Library</Link></li>
+                <li><Link href="/apply" className="text-white/70 transition-colors hover:text-white">Apply for Ignite</Link></li>
+                <li><Link href="/student" className="text-white/70 transition-colors hover:text-white">Student Portal</Link></li>
+              </ul>
+            </div>
           </div>
 
-          <div>
-            <h3 className="font-display font-bold text-lg mb-6 text-gold">Ignite Program</h3>
-            <ul className="space-y-4">
-              <li><Link href="/ignite" className="text-white/70 hover:text-white transition-colors">Program Overview</Link></li>
-              <li><Link href="/ignite/courses" className="text-white/70 hover:text-white transition-colors">Course Library</Link></li>
-              <li><Link href="/apply" className="text-white/70 hover:text-white transition-colors">Apply for Ignite</Link></li>
-              <li><Link href="/student" className="text-white/70 hover:text-white transition-colors">Student Portal</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-display font-bold text-lg mb-6 text-gold">Contact Info</h3>
+          <div className="max-w-sm">
+            <h3 className="mb-6 text-lg font-bold text-gold">Contact Info</h3>
             <ul className="space-y-4 text-white/70">
               <li>Baba Dogo, Kanyoro House</li>
               <li>3rd Floor, Nairobi</li>
@@ -63,14 +63,13 @@ export function Footer() {
               <li className="text-accent/90 hover:text-accent"><a href="mailto:diceministrykenya@gmail.com">diceministrykenya@gmail.com</a></li>
             </ul>
           </div>
-
         </div>
 
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-white/50 text-sm">© {(new Date()).getFullYear()} DICE Ministry CBO. All rights reserved.</p>
+        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
+          <p className="text-sm text-white/50">© {new Date().getFullYear()} DICE Ministry CBO. All rights reserved.</p>
           <div className="flex gap-6">
-            <Link href="/privacy" className="text-white/50 text-sm hover:text-white">Privacy Policy</Link>
-            <Link href="/terms" className="text-white/50 text-sm hover:text-white">Terms of Service</Link>
+            <Link href="/privacy" className="text-sm text-white/50 hover:text-white">Privacy Policy</Link>
+            <Link href="/terms" className="text-sm text-white/50 hover:text-white">Terms of Service</Link>
           </div>
         </div>
       </div>

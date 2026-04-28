@@ -1,65 +1,70 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { wixPublicContent } from '@/lib/wix-public-content';
 
 export const metadata: Metadata = {
   title: 'Our Story & Mission | DICE Ministry',
 };
 
 export default function AboutPage() {
+  const about = wixPublicContent.about;
+
   return (
     <div>
-      <section className="h-[50vh] min-h-[400px] relative flex items-center justify-center">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url("https://picsum.photos/seed/diceabout/1920/1080")' }}
-        >
-          <div className="absolute inset-0 bg-primary/70"></div>
+      <section className="relative bg-primary pt-32 pb-20 text-center text-white">
+        <div className="absolute inset-0">
+          <Image src={about.heroImage} alt="About DICE Ministry" fill className="object-cover opacity-30" priority />
+          <div className="absolute inset-0 bg-primary/78" />
         </div>
-        
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-5xl md:text-6xl font-display font-bold text-white mb-4">About Us</h1>
-          <p className="text-gold font-medium tracking-wider uppercase text-sm">Empowering the Next Generation</p>
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.32em] text-gold">{about.eyebrow}</p>
+          <h1 className="text-4xl font-display font-bold md:text-6xl">{about.title}</h1>
         </div>
       </section>
 
-      <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-32">
+      <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mb-32 grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
           <div>
-            <h2 className="text-3xl font-display font-bold text-primary mb-6">Our Story</h2>
-            <p className="text-lg text-muted-foreground mb-4">
-              DICE [Discipleship In Context of Evangelism] Ministry CBO is a faith-based organization that was founded in March 2008 by Maurice Agunda.
-            </p>
-            <p className="text-lg text-muted-foreground mb-4">
-              It was founded as a 9-month discipleship and evangelism training program for the youth. It is duly registered as a community-based organization by the Directorate of Social Development in accordance with The Community Groups Registration Act.
-            </p>
-            <p className="text-lg text-muted-foreground">
-              DICE is dedicated to helping young people maximize their God-given potential by applying spiritual principles in all spheres of life resulting in a lifestyle that is balanced, focused, and purposeful.
-            </p>
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.28em] text-accent">{about.subtitle}</p>
+            {about.story.map((paragraph) => (
+              <p key={paragraph} className="mb-5 text-lg leading-8 text-muted-foreground">
+                {paragraph}
+              </p>
+            ))}
           </div>
-          <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-xl">
-             <Image src="https://picsum.photos/seed/hist/800/600" alt="History" fill className="object-cover" />
+          <div className="relative h-[420px] overflow-hidden rounded-[28px] border border-white/10 shadow-[0_24px_60px_rgba(10,25,49,0.18)]">
+            <Image src={about.storyImage} alt="DICE Ministry story" fill className="object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/30 via-transparent to-transparent" />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-32">
-          <div className="bg-surface rounded-3xl p-10 border-t-4 border-accent shadow-sm">
-            <h3 className="font-display font-bold text-2xl text-primary mb-4">Our Mission</h3>
-            <p className="text-xl text-muted-foreground">&quot;We exist to mobilize resources and design programs that promote godliness, skillfulness, and empowerment!&quot;</p>
+        <div className="mb-32 grid grid-cols-1 gap-8 md:grid-cols-2">
+          <div className="rounded-3xl border-t-4 border-accent bg-surface p-10 shadow-sm">
+            <h2 className="mb-4 text-2xl font-display font-bold text-primary">Our Mission</h2>
+            <p className="text-xl text-muted-foreground">{about.mission}</p>
           </div>
-          <div className="bg-surface rounded-3xl p-10 border-t-4 border-primary shadow-sm">
-            <h3 className="font-display font-bold text-2xl text-primary mb-4">Our Vision</h3>
-            <p className="text-xl text-muted-foreground">&quot;We see a generation of young people who know God, are skillful, and empowered!&quot;</p>
+          <div className="rounded-3xl border-t-4 border-primary bg-surface p-10 shadow-sm">
+            <h2 className="mb-4 text-2xl font-display font-bold text-primary">Our Vision</h2>
+            <p className="text-xl text-muted-foreground">{about.vision}</p>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link href="/about/history" className="group block p-8 border border-border rounded-2xl hover:border-accent hover:shadow-md transition-all">
-            <h4 className="font-display font-bold text-xl text-primary mb-2 group-hover:text-accent transition-colors">Our History Timeline &rarr;</h4>
+
+        <div className="mb-24 grid gap-5 md:grid-cols-3">
+          {[about.storyImage, about.heroImage, about.storyImage].map((image, index) => (
+            <div key={index} className="relative h-64 overflow-hidden rounded-[24px] border border-border shadow-sm">
+              <Image src={image} alt={`About story gallery ${index + 1}`} fill className="object-cover" />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Link href="/about/history" className="group block rounded-2xl border border-border p-8 transition-all hover:border-accent hover:shadow-md">
+            <h3 className="mb-2 text-xl font-display font-bold text-primary transition-colors group-hover:text-accent">Our History Timeline &rarr;</h3>
             <p className="text-muted-foreground">Trace the journey of DICE Ministry from 2008 to present.</p>
           </Link>
-          <Link href="/about/belief" className="group block p-8 border border-border rounded-2xl hover:border-primary hover:shadow-md transition-all">
-            <h4 className="font-display font-bold text-xl text-primary mb-2 group-hover:text-primary transition-colors">What We Believe &rarr;</h4>
+          <Link href="/about/belief" className="group block rounded-2xl border border-border p-8 transition-all hover:border-primary hover:shadow-md">
+            <h3 className="mb-2 text-xl font-display font-bold text-primary">What We Believe &rarr;</h3>
             <p className="text-muted-foreground">Discover the faith foundations that guide our ministry.</p>
           </Link>
         </div>

@@ -1,14 +1,14 @@
 'use client';
 
 import { motion } from 'motion/react';
-import Image from 'next/image';
+import Image, { type StaticImageData } from 'next/image';
 
 interface AlumniCardProps {
   name: string;
   cohort: string;
   update: string;
   quote: string;
-  image: string;
+  image: string | StaticImageData;
   placeholder?: boolean;
 }
 

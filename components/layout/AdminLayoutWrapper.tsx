@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, Users, BookOpen, FileCheck, MessageSquare, Megaphone, Settings, LogOut, ClipboardList, FolderKanban, UserCog } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Users, BookOpen, FileCheck, MessageSquare, Megaphone, Settings, LogOut, ClipboardList, FolderKanban, UserCog, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -21,18 +21,28 @@ const LINKS = [
 
 export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const pathname = usePathname();
 
-  const renderSidebarContent = () => (
+  const renderSidebarContent = (collapsed = false) => (
     <>
       <div className="p-6 flex items-center justify-between md:justify-start">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">D</div>
-          <span className="font-display font-bold text-lg text-white">DICE Admin</span>
+          {!collapsed ? <span className="font-display font-bold text-lg text-white">DICE Admin</span> : null}
         </div>
-        <button className="md:hidden text-white" onClick={() => setMobileMenuOpen(false)}>
-          <X className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="hidden rounded-full bg-white/10 p-2 text-white md:inline-flex"
+            onClick={() => setDesktopSidebarOpen((open) => !open)}
+            aria-label={desktopSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            {desktopSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+          </button>
+          <button className="md:hidden text-white" onClick={() => setMobileMenuOpen(false)}>
+            <X className="w-6 h-6" />
+          </button>
+        </div>
       </div>
       
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto w-full">
@@ -50,9 +60,9 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
             >
               <div className="flex items-center gap-3">
                 <link.icon className="w-5 h-5 shrink-0" /> 
-                <span className="truncate">{link.name}</span>
+                {!collapsed ? <span className="truncate">{link.name}</span> : null}
               </div>
-              {link.badge && (
+              {!collapsed && link.badge && (
                 <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full shrink-0", link.badgeClass || "bg-accent text-white")}>{link.badge}</span>
               )}
             </Link>
@@ -62,10 +72,10 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
       
       <div className="p-4 border-t border-white/10 space-y-2 shrink-0">
         <Link href="/admin/settings" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
-          <Settings className="w-5 h-5 shrink-0" /> Settings
+          <Settings className="w-5 h-5 shrink-0" /> {!collapsed ? 'Settings' : null}
         </Link>
         <Link href="/" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
-          <LogOut className="w-5 h-5 shrink-0" /> Logout
+          <LogOut className="w-5 h-5 shrink-0" /> {!collapsed ? 'Logout' : null}
         </Link>
       </div>
     </>
@@ -85,8 +95,8 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 bg-primary text-white flex-col shrink-0 h-full overflow-y-auto border-r border-white/10">
-        {renderSidebarContent()}
+      <aside className={cn("hidden bg-primary text-white md:flex md:flex-col shrink-0 h-full overflow-y-auto border-r border-white/10 transition-[width] duration-300", desktopSidebarOpen ? 'md:w-64' : 'md:w-[92px]')}>
+        {renderSidebarContent(!desktopSidebarOpen)}
       </aside>
 
       {/* Mobile Drawer */}
@@ -107,15 +117,15 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
               onClick={(e) => e.stopPropagation()}
               className="absolute top-0 bottom-0 left-0 w-[280px] max-w-[80vw] bg-primary flex flex-col shadow-xl"
             >
-              {renderSidebarContent()}
+              {renderSidebarContent(false)}
             </motion.aside>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 mt-16 md:mt-0 w-full min-w-0">
-        <div className="max-w-7xl mx-auto w-full">
+      <main className="mt-16 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:mt-0 md:p-8">
+        <div className="mx-auto max-w-7xl w-full min-w-0">
           {children}
         </div>
       </main>
