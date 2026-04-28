@@ -77,7 +77,7 @@ export default function CourseLibraryPage() {
               </div>
 
               <div className="pt-6 border-t border-border mt-auto">
-                <Button asChild className="w-full bg-[#E8621A] hover:bg-[#E8621A]/90 text-white font-bold" size="lg">
+              <Button asChild className="w-full bg-[#F6AC55] font-bold text-white hover:bg-[#F6AC55]/90" size="lg">
                   <Link href="/apply">Enroll in Ignite</Link>
                 </Button>
               </div>

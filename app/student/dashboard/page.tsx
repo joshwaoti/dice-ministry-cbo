@@ -29,7 +29,7 @@ export default function StudentDashboard() {
           <section>
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Jump Back In</h2>
             <div className="bg-primary text-white rounded-2xl p-8 relative overflow-hidden shadow-lg border border-primary/20">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(232,98,26,0.3),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(246,172,85,0.3),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)]" />
               <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-transparent" />
 
               <div className="relative z-10">

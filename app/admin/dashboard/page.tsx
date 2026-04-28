@@ -129,9 +129,9 @@ export default function AdminDashboard() {
                   <Line 
                     type="monotone" 
                     dataKey="count" 
-                    stroke="#E8621A" 
+                    stroke="#F6AC55"
                     strokeWidth={3}
-                    dot={{ fill: '#E8621A', strokeWidth: 0, r: 4 }}
+                    dot={{ fill: '#F6AC55', strokeWidth: 0, r: 4 }}
                     activeDot={{ r: 6, strokeWidth: 0 }}
                     animationDuration={1500}
                   />

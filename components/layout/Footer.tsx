@@ -66,11 +66,15 @@ export function Footer() {
         </div>
 
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
-          <p className="text-sm text-white/50">© {new Date().getFullYear()} DICE Ministry CBO. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="text-sm text-white/50 hover:text-white">Privacy Policy</Link>
-            <Link href="/terms" className="text-sm text-white/50 hover:text-white">Terms of Service</Link>
-          </div>
+          <p className="text-sm text-white/50">© {new Date().getFullYear()} Ministry CBO. All rights reserved.</p>
+          <a
+            href="https://otieno.vercel.app"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-white/50 transition-colors hover:text-white"
+          >
+            Made with 🧡 Zitrion.
+          </a>
         </div>
       </div>
     </footer>

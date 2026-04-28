@@ -91,7 +91,7 @@ export function TestimonialSection() {
               {/* 5-star rating */}
               <div className="flex justify-center gap-1 mb-8">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-[#F4A623] text-[#F4A623]" />
+                    <Star key={i} className="h-5 w-5 fill-[#F6AC55] text-[#F6AC55]" />
                 ))}
               </div>
 

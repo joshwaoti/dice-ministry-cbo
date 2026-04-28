@@ -56,7 +56,7 @@ export function Navbar() {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center text-white font-display font-bold text-xl relative group">
-              <div className="absolute inset-0 bg-[#F4A623] rounded-lg -z-10 group-hover:animate-ping opacity-0 group-hover:opacity-60 transition-opacity"></div>
+                  <div className="absolute inset-0 -z-10 rounded-lg bg-[#F6AC55] opacity-0 transition-opacity group-hover:animate-ping group-hover:opacity-60"></div>
               D
             </div>
             <span className={cn('font-display font-bold text-xl tracking-tight transition-colors', 

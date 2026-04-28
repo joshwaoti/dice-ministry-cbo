@@ -15,8 +15,8 @@ export function PortalIllustration({
   variant: Variant;
   className?: string;
 }) {
-  const accent = variant === 'documents' ? '#F4A623' : '#E8621A';
-  const secondary = variant === 'messages' ? '#0D7377' : '#0A1931';
+  const accent = '#F6AC55';
+  const secondary = variant === 'messages' ? '#0E2973' : '#213E8C';
 
   return (
     <svg viewBox="0 0 320 220" role="img" aria-label={variantLabel[variant]} className={className}>

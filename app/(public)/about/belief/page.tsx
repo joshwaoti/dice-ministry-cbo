@@ -38,14 +38,14 @@ export default function BeliefPage() {
         </div>
       </section>
 
-      <section className="py-32 relative overflow-hidden bg-[#0A1931]">
+      <section className="relative overflow-hidden bg-[#213E8C] py-32">
         <div className="max-w-4xl mx-auto px-4 relative z-10 text-center">
-          <div className="text-[#F4A623] text-8xl font-display leading-none mb-4">&quot;</div>
+            <div className="mb-4 font-display text-8xl leading-none text-[#F6AC55]">&quot;</div>
           <blockquote className="text-3xl md:text-5xl font-display font-medium text-white leading-tight mb-8">
             Don&apos;t let anyone look down on you because you are young, but set an example for the believers in speech,
             in conduct, in love, in faith and in purity.
           </blockquote>
-          <cite className="block text-[#F4A623] font-bold text-xl uppercase tracking-widest not-italic">1 Timothy 4:12</cite>
+            <cite className="block text-xl font-bold uppercase tracking-widest not-italic text-[#F6AC55]">1 Timothy 4:12</cite>
         </div>
       </section>
 

@@ -107,7 +107,7 @@ export default function LoginPage() {
       top: Math.random() * 100,
       delay: Math.random() * 8,
       duration: 15 + Math.random() * 15,
-      color: ['#E8621A', '#F4A623', '#0D7377'][Math.floor(Math.random() * 3)]
+                  color: ['#F6AC55', '#213E8C', '#0E2973'][Math.floor(Math.random() * 3)]
     }))
   );
 
@@ -115,8 +115,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex w-full overflow-hidden bg-white">
       {/* LEFT PANEL - Hidden on mobile */}
       <div 
-        className="hidden lg:flex flex-col w-[45%] h-screen relative overflow-hidden bg-[#0A1931]"
-        style={{ background: 'radial-gradient(circle at center, #0D7377 0%, #0A1931 70%)' }}
+            className="hidden lg:flex h-screen w-[45%] flex-col overflow-hidden bg-[#213E8C] relative"
+            style={{ background: 'radial-gradient(circle at center, #6989E0 0%, #213E8C 70%)' }}
       >
         {/* Particles */}
         {particles.map(p => (

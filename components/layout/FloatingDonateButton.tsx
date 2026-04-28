@@ -20,7 +20,7 @@ export function FloatingDonateButton() {
           position: absolute;
           inset: -4px;
           border-radius: 50%;
-          background-color: #E8621A;
+          background-color: #F6AC55;
           animation: pulse-ring 2s infinite;
           opacity: 0.4;
           z-index: -1;

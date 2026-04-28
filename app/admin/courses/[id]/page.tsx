@@ -117,7 +117,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
                     type="checkbox"
                     checked={publishChecklist[key as keyof typeof publishChecklist]}
                     onChange={() => setPublishChecklist((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                    className="mt-1 h-4 w-4 rounded border-border accent-[#E8621A]"
+                          className="mt-1 h-4 w-4 rounded border-border accent-[#F6AC55]"
                   />
                   <div>
                     <p className="font-medium text-primary">{label}</p>
