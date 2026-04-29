@@ -1,16 +1,51 @@
+'use client';
+
+import { use } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Clock3, PlayCircle } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { ArrowRight, BookOpen, Clock3, FileText } from 'lucide-react';
+import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { getCourseById } from '@/lib/portal-data';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 
-export default async function CourseDetail({ params }: { params: Promise<{ courseId: string }> }) {
-  const { courseId } = await params;
-  const course = getCourseById(courseId);
+function canQueryConvexId(id: string) {
+  return id.length > 20 && !id.includes('-');
+}
+
+export default function CourseDetail({ params }: { params: Promise<{ courseId: string }> }) {
+  const { courseId } = use(params);
+  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
+  const fallbackCourse = getCourseById(courseId);
+  const course = liveCourse
+    ? {
+        id: liveCourse._id,
+        title: liveCourse.title,
+        synopsis: liveCourse.synopsis,
+        progress: liveCourse.enrollment?.progressPercent ?? 0,
+        moduleCount: liveCourse.modules.length,
+        mentor: 'Assigned mentor',
+        nextUnit: liveCourse.modules[0]?.units[0]?.title ?? 'Open first unit',
+        modules: liveCourse.modules.map((module: any) => ({
+          id: module._id,
+          title: module.title,
+          status: 'Open',
+          units: module.units.map((unit: any) => ({
+            id: unit._id,
+            title: unit.title,
+            type: unit.type === 'assignment' ? 'Assignment' : 'Reading',
+            duration: unit.estimatedMinutes ? `${unit.estimatedMinutes} min` : 'Self-paced',
+          })),
+        })),
+      }
+    : fallbackCourse;
 
   return (
     <div className="space-y-8 pb-10">
+      {canQueryConvexId(courseId) && liveCourse === undefined ? <LoadingPortalState label="Loading course..." /> : null}
       <PortalPageHeader
         eyebrow="Course Overview"
         title={course.title}
@@ -18,7 +53,7 @@ export default async function CourseDetail({ params }: { params: Promise<{ cours
         actions={(
           <Button asChild variant="primary">
             <Link href={`/student/courses/${course.id}/learn`}>
-              <PlayCircle className="mr-2 h-4 w-4" /> Resume Learning
+              <FileText className="mr-2 h-4 w-4" /> Resume Reading
             </Link>
           </Button>
         )}
@@ -42,7 +77,10 @@ export default async function CourseDetail({ params }: { params: Promise<{ cours
             <StatusPill label="Active" tone={course.progress > 70 ? 'success' : 'info'} />
           </div>
 
-          {course.modules.map((module, moduleIndex) => (
+          {course.modules.length === 0 ? (
+            <EmptyPortalState variant="learning" title="No modules published yet" description="Published reading units and assignment units will appear here once the course team adds them." />
+          ) : null}
+          {course.modules.map((module: any, moduleIndex: number) => (
             <div key={module.id} className="rounded-[22px] border border-border bg-slate-50/70 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -52,7 +90,7 @@ export default async function CourseDetail({ params }: { params: Promise<{ cours
                 <StatusPill label={module.status} tone={module.status === 'Completed' ? 'success' : module.status === 'Locked' ? 'warning' : 'info'} />
               </div>
               <div className="mt-4 space-y-3">
-                {module.units.map((unit, unitIndex) => (
+                {module.units.map((unit: any, unitIndex: number) => (
                   <Link
                     key={unit.id}
                     href={`/student/courses/${course.id}/${module.id}/${unit.id}`}
@@ -80,7 +118,7 @@ export default async function CourseDetail({ params }: { params: Promise<{ cours
           <div className="rounded-[26px] border border-border bg-white p-6 shadow-sm">
             <h2 className="font-display text-xl font-bold text-primary">This course includes</h2>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <p>Video lessons, reading units, downloadable worksheets, private notes, and assignment upload surfaces.</p>
+              <p>Reading units, downloadable worksheets, private notes, and assignment upload surfaces.</p>
               <p>Progress indicators stay visible so students can self-orient without hunting through the interface.</p>
             </div>
           </div>
@@ -88,7 +126,7 @@ export default async function CourseDetail({ params }: { params: Promise<{ cours
             <h2 className="font-display text-xl font-bold">Next recommended step</h2>
             <p className="mt-2 text-sm text-white/80">Continue with <span className="font-semibold text-white">{course.nextUnit}</span> to keep your current streak active.</p>
             <Button asChild className="mt-5" variant="white">
-              <Link href={`/student/courses/${course.id}/learn`}>Open lesson player</Link>
+              <Link href={`/student/courses/${course.id}/learn`}>Open lesson reader</Link>
             </Button>
           </div>
         </aside>

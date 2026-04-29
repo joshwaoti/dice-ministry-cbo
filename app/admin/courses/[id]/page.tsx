@@ -14,7 +14,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
   const course = getCourseById(id);
   const [publishChecklist, setPublishChecklist] = useState({
     outcomes: true,
-    media: true,
+    documents: true,
     assignment: false,
   });
   const { toast } = useToast();
@@ -109,7 +109,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
             <div className="mt-5 space-y-3">
               {[
                 ['outcomes', 'Learning outcomes added to all modules'],
-                ['media', 'Required media and downloadable files attached'],
+                ['documents', 'Required readings and downloadable documents attached'],
                 ['assignment', 'Assignment settings reviewed and graded rubric attached'],
               ].map(([key, label]) => (
                 <label key={key} className="flex items-start gap-3 rounded-2xl border border-border p-4">

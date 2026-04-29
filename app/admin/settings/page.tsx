@@ -1,12 +1,47 @@
 'use client';
 
+import { useState } from 'react';
+import { useMutation, useQuery } from 'convex/react';
 import { BellRing, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
 export default function AdminSettingsPage() {
+  const settings = useQuery(api.settings.getAll, {}) as any | undefined;
+  const saveSetting = useMutation(api.settings.upsert);
+  const [notifications, setNotifications] = useState({
+    applicationSubmitted: true,
+    assignmentReview: true,
+    studentAtRisk: true,
+    documentUploadAlert: true,
+  });
+  const [operations, setOperations] = useState({
+    defaultAssignmentFileLimitMB: 10,
+    reminderHoursBeforeDeadline: 24,
+    courseAutosaveSeconds: 2,
+  });
+  const [dirty, setDirty] = useState(false);
   const { toast } = useToast();
+  const visibleNotifications = dirty ? notifications : settings?.notifications ?? notifications;
+  const visibleOperations = dirty ? operations : settings?.operations ?? operations;
+
+  const handleSave = async () => {
+    await Promise.all([
+      saveSetting({ key: 'notifications', value: visibleNotifications }),
+      saveSetting({ key: 'operations', value: visibleOperations }),
+    ]);
+    toast({ title: 'Settings updated', description: 'Portal preferences and notification rules were saved to Convex.', tone: 'success' });
+  };
+
+  const notificationRows = [
+    ['applicationSubmitted', 'New Ignite application submitted', 'Email + in-app notification'],
+    ['assignmentReview', 'Assignment requires review', 'In-app only, escalates to email after 12 hours'],
+    ['studentAtRisk', 'Student marked at risk', 'Email mentor + cohort lead'],
+    ['documentUploadAlert', 'Document upload failed compliance checks', 'Admin security alert'],
+  ] as const;
 
   return (
     <div className="space-y-8 pb-12">
@@ -14,7 +49,7 @@ export default function AdminSettingsPage() {
         eyebrow="Admin Portal"
         title="Platform Settings"
         description="Tune notifications, publishing defaults, admissions policy, and admin permission boundaries."
-        actions={<Button variant="primary" onClick={() => toast({ title: 'Settings updated', description: 'Portal preferences and notification rules were saved.', tone: 'success' })}>Save Settings</Button>}
+        actions={<Button variant="primary" onClick={handleSave}>Save Settings</Button>}
       />
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -27,14 +62,18 @@ export default function AdminSettingsPage() {
             </div>
           </div>
           <div className="mt-6 space-y-4">
-            {[
-              ['New Ignite application submitted', 'Email + in-app notification'],
-              ['Assignment requires review', 'In-app only, escalates to email after 12 hours'],
-              ['Student marked at risk', 'Email mentor + cohort lead'],
-              ['Document upload failed compliance checks', 'Admin security alert'],
-            ].map(([label, hint]) => (
+            {settings === undefined ? <LoadingPortalState label="Loading settings..." /> : null}
+            {notificationRows.map(([key, label, hint]) => (
               <label key={label} className="flex items-start gap-4 rounded-2xl border border-border p-4">
-                <input type="checkbox" defaultChecked className="mt-1 h-5 w-5 rounded border-gray-300 text-accent focus:ring-accent" />
+                <input
+                  type="checkbox"
+                  checked={visibleNotifications[key]}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setNotifications({ ...visibleNotifications, [key]: event.target.checked });
+                  }}
+                  className="mt-1 h-5 w-5 rounded border-gray-300 text-accent focus:ring-accent"
+                />
                 <div>
                   <p className="font-medium text-primary">{label}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{hint}</p>
@@ -55,9 +94,9 @@ export default function AdminSettingsPage() {
             </div>
             <div className="mt-5 space-y-3 text-sm">
               {[
-                'Only super admins can publish courses.',
-                'Admissions officers can approve applications but cannot delete users.',
-                'Instructors can upload learning documents and review assignments.',
+                'Course publishing requires super_admin role.',
+                'Admissions can approve but cannot delete users.',
+                'Instructors can upload docs and review assignments.',
               ].map((rule) => (
                 <div key={rule} className="rounded-2xl border border-border bg-surface px-4 py-3 text-muted-foreground">{rule}</div>
               ))}
@@ -73,9 +112,45 @@ export default function AdminSettingsPage() {
               </div>
             </div>
             <div className="mt-5 space-y-4 text-sm text-muted-foreground">
-              <div className="rounded-2xl border border-border px-4 py-3">Default assignment file limit: 10 MB</div>
-              <div className="rounded-2xl border border-border px-4 py-3">Reminder cadence: 24 hours before deadlines</div>
-              <div className="rounded-2xl border border-border px-4 py-3">Autosave cadence for course editor: 2 seconds after last edit</div>
+              <label className="block rounded-2xl border border-border px-4 py-3">
+                <span className="text-sm font-semibold text-primary">Default assignment file limit (MB)</span>
+                <input
+                  type="number"
+                  min={1}
+                  className="mt-2 h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus:border-accent"
+                  value={visibleOperations.defaultAssignmentFileLimitMB}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setOperations({ ...visibleOperations, defaultAssignmentFileLimitMB: Number(event.target.value) });
+                  }}
+                />
+              </label>
+              <label className="block rounded-2xl border border-border px-4 py-3">
+                <span className="text-sm font-semibold text-primary">Reminder cadence (hours before deadlines)</span>
+                <input
+                  type="number"
+                  min={1}
+                  className="mt-2 h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus:border-accent"
+                  value={visibleOperations.reminderHoursBeforeDeadline}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setOperations({ ...visibleOperations, reminderHoursBeforeDeadline: Number(event.target.value) });
+                  }}
+                />
+              </label>
+              <label className="block rounded-2xl border border-border px-4 py-3">
+                <span className="text-sm font-semibold text-primary">Course editor autosave cadence (seconds)</span>
+                <input
+                  type="number"
+                  min={1}
+                  className="mt-2 h-10 w-full rounded-md border border-input px-3 text-sm outline-none focus:border-accent"
+                  value={visibleOperations.courseAutosaveSeconds}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setOperations({ ...visibleOperations, courseAutosaveSeconds: Number(event.target.value) });
+                  }}
+                />
+              </label>
             </div>
           </div>
         </section>

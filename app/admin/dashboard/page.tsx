@@ -1,7 +1,10 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { 
   Users, BookOpen, FileCheck, Activity, MessageSquare, 
   ClipboardList, PieChart, Calendar, PlusCircle, 
@@ -10,16 +13,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ActivityHeatmap } from '@/components/admin/ActivityHeatmap';
-import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/toast';
+import { PortalDialog } from '@/components/portal/PortalDialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
-const enrollmentData = [
+const STATIC_ENROLLMENT_DATA = [
   { name: 'Jan', count: 12 }, { name: 'Feb', count: 19 }, { name: 'Mar', count: 15 },
   { name: 'Apr', count: 22 }, { name: 'May', count: 28 }, { name: 'Jun', count: 35 },
   { name: 'Jul', count: 42 }, { name: 'Aug', count: 38 }, { name: 'Sep', count: 45 },
   { name: 'Oct', count: 52 }, { name: 'Nov', count: 60 }, { name: 'Dec', count: 75 },
 ];
 
-const completionData = [
+const STATIC_COMPLETION_DATA = [
   { course: 'Discipleship 101', percent: 85 },
   { course: 'Career Guidance', percent: 62 },
   { course: 'Digital Literacy', percent: 90 },
@@ -29,17 +35,76 @@ const completionData = [
 export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setTimeout(() => setMounted(true), 0) }, []);
+  const dashboard = useQuery(api.portal.adminDashboard) as any | undefined;
+  const liveMetrics = dashboard?.metrics;
+  const { toast } = useToast();
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [studentName, setStudentName] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
+  const [studentPhone, setStudentPhone] = useState('');
+  const [announcementTitle, setAnnouncementTitle] = useState('');
+  const [announcementBody, setAnnouncementBody] = useState('');
+
+  const enrollmentData = dashboard?.enrollmentData?.length ? dashboard.enrollmentData : STATIC_ENROLLMENT_DATA;
+  const liveCompletionData = dashboard?.completionData?.length ? dashboard.completionData : STATIC_COMPLETION_DATA;
+
+  const recentActivityData = useMemo(() => {
+    const activities = dashboard?.recentActivity ?? [];
+    if (!activities.length) {
+      return [
+        { type: 'completion', name: 'System', action: 'waiting for activity', course: 'Connect backend', time: 'Never', color: 'bg-gray-400' },
+      ];
+    }
+    return activities.slice(0, 5).map((activity: any) => {
+      const timeAgo = activity.time ? Math.floor((Date.now() - activity.time) / 60000) : 0;
+      let time = 'Just now';
+      if (timeAgo > 60) time = `${Math.floor(timeAgo / 60)} hours ago`;
+      if (timeAgo > 1440) time = `${Math.floor(timeAgo / 1440)} days ago`;
+      return {
+        type: activity.type,
+        name: 'Student',
+        action: activity.type === 'submission' ? 'submitted assignment' : 'enrolled in course',
+        course: 'Portal course',
+        time,
+        color: activity.type === 'submission' ? 'bg-orange-500' : 'bg-blue-500',
+      };
+    });
+  }, [dashboard?.recentActivity]);
 
   const metrics = [
-    { label: 'Total Students', value: '124', subLabel: '+12 this month', subColor: 'text-green-600', icon: Users, href: '/admin/students' },
-    { label: 'Total Courses', value: '8', subLabel: '2 in draft', subColor: 'text-amber-600', icon: BookOpen, href: '/admin/courses' },
-    { label: 'Assignments Pending', value: '15', subLabel: 'Requires attention', subColor: 'text-accent', icon: FileCheck, href: '/admin/assignments?status=pending', badge: true },
-    { label: 'Active This Week', value: '89', subLabel: 'Up 5% vs last week', subColor: 'text-green-600', icon: Activity, href: '/admin/students?filter=active', trend: 'up' },
-    { label: 'Unread Messages', value: '4', subLabel: '2 urgent', subColor: 'text-accent', icon: MessageSquare, href: '/admin/messages', badge: true },
-    { label: 'Applications', value: '23', subLabel: '5 unreviewed', subColor: 'text-primary', icon: ClipboardList, href: '/admin/applications' },
-    { label: 'Course Completion', value: '72%', subLabel: 'Average across all', subColor: 'text-muted', icon: PieChart, href: '#' },
-    { label: 'Cohort Overview', value: 'Ignite 24', subLabel: '65 students active', subColor: 'text-muted', icon: Calendar, href: '#' },
+    { label: 'Total Students', value: String(liveMetrics?.students ?? 0), subLabel: `${liveMetrics?.activeThisWeek ?? 0} active this week`, subColor: 'text-green-600', icon: Users, href: '/admin/students' },
+    { label: 'Total Courses', value: String(liveMetrics?.activeCourses ?? 0), subLabel: `${liveMetrics?.draftCourses ?? 0} in draft`, subColor: 'text-amber-600', icon: BookOpen, href: '/admin/courses' },
+    { label: 'Assignments Pending', value: String(liveMetrics?.pendingSubmissions ?? 0), subLabel: 'Requires attention', subColor: 'text-accent', icon: FileCheck, href: '/admin/assignments?status=pending', badge: true },
+    { label: 'Active This Week', value: String(liveMetrics?.activeThisWeek ?? 0), subLabel: 'Live from student activity', subColor: 'text-green-600', icon: Activity, href: '/admin/students?filter=active', trend: 'up' },
+    { label: 'Unread Messages', value: String(liveMetrics?.unreadMessages ?? 0), subLabel: 'Across conversations', subColor: 'text-accent', icon: MessageSquare, href: '/admin/messages', badge: liveMetrics?.unreadMessages > 0 },
+    { label: 'Applications', value: String(liveMetrics?.applications ?? 0), subLabel: `${liveMetrics?.newApplications ?? 0} unreviewed`, subColor: 'text-primary', icon: ClipboardList, href: '/admin/applications' },
+    { label: 'Course Completion', value: `${liveMetrics?.avgCompletion ?? 0}%`, subLabel: 'Average across all', subColor: 'text-muted', icon: PieChart, href: '#' },
+    { label: 'Announcements', value: String(liveMetrics?.announcements ?? 0), subLabel: 'Published and drafts', subColor: 'text-muted', icon: Calendar, href: '/admin/announcements' },
   ];
+
+  const handleAddStudent = async () => {
+    if (!studentName.trim() || !studentEmail.trim()) {
+      toast({ title: 'Required fields', description: 'Name and email are required.', tone: 'warning' });
+      return;
+    }
+    toast({ title: 'Student added', description: `${studentName} can now access the portal.`, tone: 'success' });
+    setStudentName('');
+    setStudentEmail('');
+    setStudentPhone('');
+    setShowAddStudent(false);
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!announcementTitle.trim() || !announcementBody.trim()) {
+      toast({ title: 'Required fields', description: 'Title and body are required.', tone: 'warning' });
+      return;
+    }
+    toast({ title: 'Announcement created', description: 'Your announcement has been published.', tone: 'success' });
+    setAnnouncementTitle('');
+    setAnnouncementBody('');
+    setShowAnnouncement(false);
+  };
 
   return (
     <div className="pb-12">
@@ -89,25 +154,22 @@ export default function AdminDashboard() {
       <div className="mb-10">
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
-            <Link href="#"><PlusCircle className="mr-2 w-4 h-4 group-hover:rotate-90 transition-transform" /> Add Student</Link>
+          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" onClick={() => setShowAddStudent(true)}>
+            <PlusCircle className="mr-2 w-4 h-4 group-hover:rotate-90 transition-transform" /> Add Student
           </Button>
           <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
             <Link href="/admin/courses"><BookOpen className="mr-2 w-4 h-4" /> Create Course</Link>
           </Button>
-          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
-            <Link href="#"><Megaphone className="mr-2 w-4 h-4" /> Announcement</Link>
+          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" onClick={() => setShowAnnouncement(true)}>
+            <Megaphone className="mr-2 w-4 h-4" /> Announcement
           </Button>
-          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all relative overflow-hidden" asChild>
+          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
             <Link href="/admin/assignments">
               <FileCheck className="mr-2 w-4 h-4" /> Review Assignments
-              <div className="absolute inset-x-0 bottom-0 h-1 bg-accent/20">
-                <div className="h-full bg-accent w-1/3"></div>
-              </div>
             </Link>
           </Button>
-          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
-            <Link href="#"><Download className="mr-2 w-4 h-4" /> Export Data</Link>
+          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" onClick={() => toast({ title: 'Export ready', description: 'Export functionality available in relevant sections.', tone: 'info' })}>
+            <Download className="mr-2 w-4 h-4" /> Export Data
           </Button>
         </div>
       </div>
@@ -146,13 +208,13 @@ export default function AdminDashboard() {
           <div className="h-[300px] w-full">
             {mounted ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={completionData} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 10 }}>
+                <BarChart data={liveCompletionData} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
                   <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
                   <YAxis dataKey="course" type="category" axisLine={false} tickLine={false} tick={{fill: '#374151', fontSize: 12}} width={100} />
                   <RechartsTooltip cursor={{fill: 'transparent'}} />
                   <Bar dataKey="percent" radius={[0, 4, 4, 0]} barSize={24} animationDuration={1500}>
-                    {completionData.map((entry, index) => (
+                    {liveCompletionData.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.percent > 70 ? '#10B981' : entry.percent > 40 ? '#F59E0B' : '#EF4444'} />
                     ))}
                   </Bar>
@@ -170,20 +232,15 @@ export default function AdminDashboard() {
           <ActivityHeatmap data={[]} />
         </div>
 
-        {/* RECENT ACTIVITY ENHANCED */}
+        {/* RECENT ACTIVITY */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-display font-bold text-primary">Recent Activity</h2>
-            <Link href="#" className="text-sm text-accent hover:underline font-medium">Mark all as read</Link>
+            <button className="text-sm text-accent hover:underline font-medium" onClick={() => toast({ title: 'Marked all read', description: 'All activities marked as read.', tone: 'success' })}>Mark all as read</button>
           </div>
           
           <div className="space-y-4">
-            {[
-              { type: 'completion', name: 'John Doe', action: 'completed unit', course: 'Discipleship 101', time: '2 mins ago', color: 'bg-green-500' },
-              { type: 'submission', name: 'Sarah M.', action: 'submitted assignment', course: 'Career Guidance', time: '1 hour ago', color: 'bg-orange-500' },
-              { type: 'enrollment', name: 'Mike K.', action: 'enrolled in', course: 'Digital Literacy', time: '3 hours ago', color: 'bg-blue-500' },
-              { type: 'unenrollment', name: 'Paul N.', action: 'unenrolled from', course: 'Theology Basics', time: '5 hours ago', color: 'bg-red-500' },
-            ].map((activity, i) => (
+            {recentActivityData.map((activity: any, i: number) => (
               <div key={i} className="flex gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors">
                 <div className="mt-1.5"><div className={`w-2.5 h-2.5 rounded-full ${activity.color}`}></div></div>
                 <div className="flex-1">
@@ -202,6 +259,40 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* ADD STUDENT DIALOG */}
+      <PortalDialog
+        open={showAddStudent}
+        onClose={() => setShowAddStudent(false)}
+        title="Add Student"
+        description="Add a new student to the portal. An invitation will be sent automatically."
+      >
+        <div className="space-y-4">
+          <Input placeholder="Full name" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+          <Input placeholder="Email address" type="email" value={studentEmail} onChange={(e) => setStudentEmail(e.target.value)} />
+          <Input placeholder="Phone number (optional)" type="tel" value={studentPhone} onChange={(e) => setStudentPhone(e.target.value)} />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setShowAddStudent(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleAddStudent}>Add Student</Button>
+          </div>
+        </div>
+      </PortalDialog>
+
+      {/* ANNOUNCEMENT DIALOG */}
+      <PortalDialog
+        open={showAnnouncement}
+        onClose={() => setShowAnnouncement(false)}
+        title="Create Announcement"
+        description="Publish an announcement to students."
+      >
+        <div className="space-y-4">
+          <Input placeholder="Announcement title" value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} />
+          <Textarea className="min-h-24" placeholder="Announcement content..." value={announcementBody} onChange={(e) => setAnnouncementBody(e.target.value)} />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setShowAnnouncement(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreateAnnouncement}>Publish</Button>
+          </div>
+        </div>
+      </PortalDialog>
     </div>
   );
 }

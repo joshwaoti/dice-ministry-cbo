@@ -1,22 +1,66 @@
 'use client';
 
 import { use, type ComponentType } from 'react';
+import { useMutation, useQuery } from 'convex/react';
 import { CalendarClock, FileUp, GraduationCap, Mail, ShieldCheck, UserRoundCheck } from 'lucide-react';
+import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { useToast } from '@/components/ui/toast';
 import { getStudentById, studentAssignments } from '@/lib/portal-data';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+
+function canQueryConvexId(id: string) {
+  return id.length > 20 && !id.includes('-');
+}
 
 export default function StudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const student = getStudentById(id);
-  const studentWork = studentAssignments.slice(0, 2);
+  const liveStudent = useQuery(api.students.get, canQueryConvexId(id) ? { studentProfileId: id as any } : 'skip') as any | undefined;
+  const liveSubmissions = useQuery(api.assignments.listSubmissions, {}) as any[] | undefined;
+  const updateStudent = useMutation(api.students.update);
   const { toast } = useToast();
+  const fallbackStudent = getStudentById(id);
+  const student = liveStudent
+    ? {
+        id: liveStudent._id,
+        initials: (liveStudent.profile?.name ?? 'Student').split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
+        name: liveStudent.profile?.name ?? 'Student',
+        email: liveStudent.profile?.email ?? 'No email',
+        track: 'Ignite',
+        cohort: liveStudent.cohort?.name ?? 'Unassigned',
+        status: liveStudent.enrollmentStatus,
+        mentor: liveStudent.mentorProfileId ? 'Assigned mentor' : 'Unassigned',
+        progress: liveStudent.progressPercent ?? 0,
+      }
+    : fallbackStudent;
+  const studentWork = liveStudent
+    ? (liveSubmissions ?? [])
+        .filter((submission) => submission.studentProfile?._id === liveStudent._id)
+        .slice(0, 4)
+        .map((submission) => ({
+          id: submission._id,
+          course: submission.course?.title ?? 'Course unavailable',
+          title: submission.assignment?.title ?? 'Assignment',
+          due: submission.assignment?.dueAt ? new Date(submission.assignment.dueAt).toLocaleDateString() : 'No due date',
+          accepted: submission.fileName ?? 'Document submission',
+          status: submission.status === 'pass' ? 'Graded' : submission.status === 'needs_revision' ? 'Revision' : 'Submitted',
+        }))
+    : studentAssignments.slice(0, 2);
+
+  const handleSave = async () => {
+    if (liveStudent) {
+      await updateStudent({ studentProfileId: liveStudent._id, enrollmentStatus: liveStudent.enrollmentStatus });
+    }
+    toast({ title: 'Student updated', description: `${student.name}'s status has been saved.`, tone: 'success' });
+  };
 
   return (
     <div className="space-y-8 pb-10">
+      {canQueryConvexId(id) && liveStudent === undefined ? <LoadingPortalState label="Loading student profile..." /> : null}
       <PortalPageHeader
         eyebrow="Student Profile"
         title={student.name}
@@ -26,7 +70,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             <Button variant="outline" onClick={() => toast({ title: 'Mentor notified', description: `A progress check-in request was sent to ${student.mentor}.`, tone: 'info' })}>
               <Mail className="mr-2 h-4 w-4" /> Message Mentor
             </Button>
-            <Button variant="primary" onClick={() => toast({ title: 'Student updated', description: `${student.name}'s status has been saved.`, tone: 'success' })}>
+            <Button variant="primary" onClick={handleSave}>
               <UserRoundCheck className="mr-2 h-4 w-4" /> Save Changes
             </Button>
           </>
@@ -110,6 +154,13 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           <div className="rounded-[24px] border border-border bg-white p-6 shadow-sm">
             <h2 className="font-display text-2xl font-bold text-primary">Recent Coursework</h2>
             <div className="mt-5 space-y-4">
+              {liveStudent && liveSubmissions !== undefined && studentWork.length === 0 ? (
+                <EmptyPortalState
+                  variant="documents"
+                  title="No coursework yet"
+                  description="Submitted assignments and graded document work will appear here for this student."
+                />
+              ) : null}
               {studentWork.map((assignment) => (
                 <div key={assignment.id} className="rounded-2xl border border-border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">

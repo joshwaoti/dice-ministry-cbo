@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { documents } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
@@ -7,9 +10,40 @@ import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { Download, FolderOpenDot, LockKeyhole, Upload } from 'lucide-react';
+import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+import { Input } from '@/components/ui/input';
+
+const PAGE_SIZE = 8;
 
 export default function AdminDocumentsPage() {
   const { toast } = useToast();
+  const [page, setPage] = useState(1);
+  const [newName, setNewName] = useState('');
+  const liveDocuments = useQuery(api.documents.listAdminLibrary) as any[] | undefined;
+  const createDocument = useMutation(api.documents.createAdminDocument);
+  const removeDocument = useMutation(api.documents.removeAdminDocument);
+  const normalizedDocuments =
+    liveDocuments?.map((document) => ({
+      id: document._id,
+      name: document.name,
+      category: document.category,
+      owner: document.owner?.name ?? 'Admin team',
+      access: document.access.replaceAll('_', ' '),
+      updated: new Date(document.updatedAt).toLocaleDateString(),
+      isLive: true,
+    })) ?? documents.map((document) => ({ ...document, isLive: false }));
+  const { pageItems, totalPages } = paginate(normalizedDocuments, page, PAGE_SIZE);
+
+  const handleCreate = async () => {
+    if (!newName.trim()) {
+      toast({ title: 'Document name required', description: 'Name the document before creating a library record.', tone: 'warning' });
+      return;
+    }
+    await createDocument({ name: newName, category: 'General', access: 'admin_team' });
+    setNewName('');
+    toast({ title: 'Document record created', description: 'Attach a file when upload storage is selected.', tone: 'success' });
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -27,12 +61,27 @@ export default function AdminDocumentsPage() {
         helper="Every uploaded file can later be linked to an assignment, student profile, or admin notice."
       />
 
+      <div className="rounded-3xl border border-border bg-white p-4 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <Input placeholder="Create document record name" value={newName} onChange={(event) => setNewName(event.target.value)} />
+          <Button variant="primary" onClick={handleCreate}><Upload className="mr-2 h-4 w-4" /> Save Document</Button>
+        </div>
+      </div>
+
       <div className="rounded-3xl border border-border bg-white shadow-sm">
         <div className="border-b border-border px-6 py-5">
           <h2 className="font-display text-2xl font-bold text-primary">Document Index</h2>
         </div>
         <div className="block space-y-4 p-4 md:hidden">
-          {documents.map((document) => (
+          {liveDocuments === undefined ? <LoadingPortalState label="Loading documents..." /> : null}
+          {liveDocuments !== undefined && normalizedDocuments.length === 0 ? (
+            <EmptyPortalState
+              variant="documents"
+              title="No documents in the library"
+              description="Create a document record or upload a handbook, admissions file, worksheet, or reporting template."
+            />
+          ) : null}
+          {pageItems.map((document) => (
             <article key={document.id} className="rounded-2xl border border-border p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -60,6 +109,16 @@ export default function AdminDocumentsPage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => toast({ title: 'Metadata updated', description: `${document.name} can now be reclassified or relinked.`, tone: 'info' })}>Edit</Button>
                 <Button size="sm" variant="outline" onClick={() => toast({ title: 'Download started', description: `${document.name} is downloading.`, tone: 'info' })}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (document.isLive) await removeDocument({ documentId: document.id as any });
+                    toast({ title: 'Document removed', description: `${document.name} was removed from the library.`, tone: 'warning' });
+                  }}
+                >
+                  Delete
+                </Button>
               </div>
             </article>
           ))}
@@ -77,7 +136,7 @@ export default function AdminDocumentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {documents.map((document) => (
+              {pageItems.map((document) => (
                 <tr key={document.id}>
                   <td className="px-6 py-4">
                     <p className="font-semibold text-primary">{document.name}</p>
@@ -91,6 +150,16 @@ export default function AdminDocumentsPage() {
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => toast({ title: 'Metadata updated', description: `${document.name} can now be reclassified or relinked.`, tone: 'info' })}>Edit</Button>
                       <Button size="sm" variant="outline" onClick={() => toast({ title: 'Download started', description: `${document.name} is downloading.`, tone: 'info' })}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          if (document.isLive) await removeDocument({ documentId: document.id as any });
+                          toast({ title: 'Document removed', description: `${document.name} was removed from the library.`, tone: 'warning' });
+                        }}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -98,6 +167,7 @@ export default function AdminDocumentsPage() {
             </tbody>
           </table>
         </div>
+        <PaginationControls page={page} totalPages={totalPages} totalItems={normalizedDocuments.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       <EmptyPortalState

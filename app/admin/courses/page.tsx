@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { BookOpenCheck, Layers3, PencilLine, PlusCircle, Sparkles, Upload } from 'lucide-react';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { courses } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { PortalDialog } from '@/components/portal/PortalDialog';
@@ -13,10 +15,47 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+
+const PAGE_SIZE = 6;
 
 export default function AdminCoursesPage() {
   const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [title, setTitle] = useState('');
+  const [synopsis, setSynopsis] = useState('');
   const { toast } = useToast();
+  const liveCourses = useQuery(api.courses.listAdmin) as any[] | undefined;
+  const createCourse = useMutation(api.courses.create);
+  const duplicateCourse = useMutation(api.courses.duplicate);
+  const archiveCourse = useMutation(api.courses.archive);
+
+  const normalizedCourses =
+    liveCourses?.map((course) => ({
+      id: course._id,
+      title: course.title,
+      status: course.status === 'published' ? 'Published' : course.status === 'archived' ? 'Archived' : 'Draft',
+      modules: course.moduleCount ?? 0,
+      units: course.unitCount ?? 0,
+      type: course.synopsis || 'Text + documents',
+      students: course.studentCount ?? 0,
+      updated: new Date(course.updatedAt).toLocaleDateString(),
+      isLive: true,
+    })) ?? courses.map((course) => ({ ...course, isLive: false }));
+  const { pageItems, totalPages } = paginate(normalizedCourses, page, PAGE_SIZE);
+
+  const handleCreate = async () => {
+    if (!title.trim()) {
+      toast({ title: 'Course title required', description: 'Add a course title before creating the draft.', tone: 'warning' });
+      return;
+    }
+    await createCourse({ title, synopsis: synopsis || 'Course overview pending.' });
+    toast({ title: 'Draft course created', description: 'The team can now add modules, units, and publishing rules.', tone: 'success' });
+    setTitle('');
+    setSynopsis('');
+    setOpen(false);
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -38,7 +77,16 @@ export default function AdminCoursesPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <section className="grid gap-6 md:grid-cols-2">
-          {courses.map((course) => (
+          {liveCourses === undefined ? <LoadingPortalState label="Loading courses..." /> : null}
+          {liveCourses !== undefined && normalizedCourses.length === 0 ? (
+            <EmptyPortalState
+              variant="learning"
+              title="No courses yet"
+              description="Create the first course shell, then add text units, assignment units, and downloadable documents."
+              action={<div className="mt-5"><Button variant="primary" onClick={() => setOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Create Course</Button></div>}
+            />
+          ) : null}
+          {pageItems.map((course) => (
             <article key={course.id} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -67,13 +115,31 @@ export default function AdminCoursesPage() {
                     <PencilLine className="mr-2 h-4 w-4" /> Edit Course
                   </Link>
                 </Button>
-                <Button variant="outline" onClick={() => toast({ title: `${course.title} duplicated`, description: 'A draft copy was created with all modules and unit settings.', tone: 'success' })}>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (course.isLive) await duplicateCourse({ courseId: course.id as any });
+                    toast({ title: `${course.title} duplicated`, description: 'A draft copy was created with all modules and unit settings.', tone: 'success' });
+                  }}
+                >
                   <Layers3 className="mr-2 h-4 w-4" /> Duplicate
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (course.isLive) await archiveCourse({ courseId: course.id as any });
+                    toast({ title: `${course.title} archived`, description: 'The course was moved out of the active library.', tone: 'warning' });
+                  }}
+                >
+                  Archive
                 </Button>
               </div>
               <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">Updated {course.updated}</p>
             </article>
           ))}
+          <div className="md:col-span-2">
+            <PaginationControls page={page} totalPages={totalPages} totalItems={normalizedCourses.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          </div>
         </section>
 
         <aside className="space-y-6">
@@ -112,7 +178,7 @@ export default function AdminCoursesPage() {
       >
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <Input placeholder="Course title" />
+            <Input placeholder="Course title" value={title} onChange={(event) => setTitle(event.target.value)} />
             <div className="grid gap-4 md:grid-cols-2">
               <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent">
                 <option>Course mode</option>
@@ -126,7 +192,7 @@ export default function AdminCoursesPage() {
                 <option>SURGE 2024</option>
               </select>
             </div>
-            <Textarea className="min-h-32" placeholder="Course overview, goals, and what learners should expect by completion." />
+            <Textarea className="min-h-32" placeholder="Course overview, goals, and what learners should expect by completion." value={synopsis} onChange={(event) => setSynopsis(event.target.value)} />
           </div>
           <div className="space-y-4">
             <UploadDropzone
@@ -139,7 +205,7 @@ export default function AdminCoursesPage() {
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button variant="primary" onClick={() => { toast({ title: 'Draft course created', description: 'The team can now add modules, units, and publishing rules.', tone: 'success' }); setOpen(false); }}>
+              <Button variant="primary" onClick={handleCreate}>
                 <Sparkles className="mr-2 h-4 w-4" /> Create Draft
               </Button>
             </div>

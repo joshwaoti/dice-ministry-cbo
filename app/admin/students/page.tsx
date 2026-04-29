@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import {
   AlertTriangle,
   Eye,
@@ -23,6 +25,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
 const PAGE_SIZE = 10;
 
@@ -30,12 +34,40 @@ export default function AdminStudentsPage() {
   const [open, setOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
+  const liveStudents = useQuery(api.students.list) as any[] | undefined;
+  const liveApplications = useQuery(api.applications.list, {}) as any[] | undefined;
+  const approveApplication = useMutation(api.applications.approve);
+  const roster =
+    liveStudents?.map((student) => {
+      const profile = student.profile ?? {};
+      return {
+        id: student._id,
+        initials: (profile.name ?? 'Student').split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
+        name: profile.name ?? 'Unnamed student',
+        email: profile.email ?? 'No email',
+        cohort: student.cohort?.name ?? 'Unassigned',
+        progress: student.progressPercent ?? 0,
+        status: student.enrollmentStatus === 'active' ? 'Active' : student.enrollmentStatus === 'pending_invite' ? 'New Admit' : student.enrollmentStatus,
+        track: 'Ignite',
+        mentor: student.mentorProfileId ? 'Assigned mentor' : 'Unassigned',
+        isLive: true,
+      };
+    }) ?? students.map((student) => ({ ...student, isLive: false }));
+  const applicationQueue =
+    liveApplications?.map((application) => ({
+      id: application._id,
+      name: application.fullName,
+      school: application.highSchool ?? 'Not provided',
+      status: application.status === 'accepted' ? 'Approved' : application.status,
+      submitted: new Date(application.submittedAt).toLocaleDateString(),
+      isLive: true,
+    })) ?? applications.map((application) => ({ ...application, isLive: false }));
 
-  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(roster.length / PAGE_SIZE));
   const paginatedStudents = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return students.slice(start, start + PAGE_SIZE);
-  }, [currentPage]);
+    return roster.slice(start, start + PAGE_SIZE);
+  }, [currentPage, roster]);
 
   return (
     <div className="space-y-8 pb-12">
@@ -66,14 +98,14 @@ export default function AdminStudentsPage() {
 
       <div className="grid gap-5 md:grid-cols-3">
         {[
-          { label: 'Active Students', value: '124', icon: Users2, hint: 'Across Ignite and alumni pathways' },
+          { label: 'Active Students', value: `${roster.filter((student) => student.status === 'Active').length}`, icon: Users2, hint: 'Across Ignite and alumni pathways' },
           {
             label: 'Pending Admissions',
-            value: `${applications.length}`,
+            value: `${applicationQueue.filter((application) => application.status !== 'Approved' && application.status !== 'accepted').length}`,
             icon: GraduationCap,
             hint: 'Applications awaiting interviews or approval',
           },
-          { label: 'At-Risk Learners', value: '7', icon: AlertTriangle, hint: 'Need mentor intervention this week' },
+          { label: 'At-Risk Learners', value: `${roster.filter((student) => student.status === 'At Risk').length}`, icon: AlertTriangle, hint: 'Need mentor intervention this week' },
         ].map((card) => (
           <div key={card.label} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
             <div className="mb-4 inline-flex rounded-2xl bg-accent/10 p-3 text-accent">
@@ -106,6 +138,15 @@ export default function AdminStudentsPage() {
         </div>
 
         <div className="space-y-4 p-4 md:hidden">
+          {liveStudents === undefined ? <LoadingPortalState label="Loading students..." /> : null}
+          {liveStudents !== undefined && roster.length === 0 ? (
+            <EmptyPortalState
+              variant="students"
+              title="No students admitted yet"
+              description="Approved applications will become student records here and receive automatic Clerk invitations."
+              action={<div className="mt-5"><Button variant="primary" onClick={() => setOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Admit New Student</Button></div>}
+            />
+          ) : null}
           {paginatedStudents.map((student) => (
             <article key={student.id} className="rounded-2xl border border-border p-4">
               <div className="flex items-start gap-3">
@@ -272,8 +313,8 @@ export default function AdminStudentsPage() {
         {totalPages > 1 ? (
           <div className="flex flex-col gap-4 border-t border-border px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, students.length)} of{' '}
-              {students.length} students
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, roster.length)} of{' '}
+              {roster.length} students
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -313,7 +354,7 @@ export default function AdminStudentsPage() {
       <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
         <h3 className="font-display text-xl font-bold text-primary">Admissions Pipeline</h3>
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          {applications.map((app) => (
+          {applicationQueue.map((app) => (
             <div key={app.id} className="rounded-2xl border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -333,13 +374,16 @@ export default function AdminStudentsPage() {
                 <Button
                   size="sm"
                   variant="primary"
-                  onClick={() =>
+                  onClick={async () => {
+                    if (app.isLive) {
+                      await approveApplication({ applicationId: app.id as any });
+                    }
                     toast({
                       title: `${app.name} admitted`,
-                      description: 'Application moved into the new-student onboarding queue.',
+                      description: 'Application approved, student profile created, and Clerk invitation queued automatically.',
                       tone: 'success',
-                    })
-                  }
+                    });
+                  }}
                 >
                   Admit
                 </Button>

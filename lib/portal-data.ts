@@ -35,15 +35,15 @@ export const courseCatalog = [
     mentor: 'Grace Njeri',
     nextUnit: 'The Grace of God',
     duration: '6 weeks',
-    badges: ['Core Ignite', 'Reflection tasks', 'Video lessons'],
+    badges: ['Core Ignite', 'Reflection tasks', 'Reading units'],
     modules: [
       {
         id: 'm1',
         title: 'Introduction to Faith',
         status: 'Completed',
         units: [
-          { id: 'u1', title: 'What is Faith?', type: 'Video lesson', duration: '18 min', completed: true },
-          { id: 'u2', title: 'The Grace of God', type: 'Video + notes', duration: '25 min', completed: false, active: true },
+          { id: 'u1', title: 'What is Faith?', type: 'Reading unit', duration: '18 min', completed: true },
+          { id: 'u2', title: 'The Grace of God', type: 'Text + notes', duration: '25 min', completed: false, active: true },
           { id: 'u3', title: 'Repentance and Renewal', type: 'Reading unit', duration: '14 min', completed: false },
         ],
       },
@@ -52,7 +52,7 @@ export const courseCatalog = [
         title: 'Discipleship Habits',
         status: 'In progress',
         units: [
-          { id: 'u1', title: 'Prayer in Everyday Life', type: 'Video lesson', duration: '21 min', completed: false },
+          { id: 'u1', title: 'Prayer in Everyday Life', type: 'Reading unit', duration: '21 min', completed: false },
           { id: 'u2', title: 'Walking with Scripture', type: 'Reading unit', duration: '17 min', completed: false },
         ],
       },
