@@ -1,28 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Menu, X, LayoutDashboard, Users, BookOpen, FileCheck, MessageSquare, Megaphone, Settings, LogOut, ClipboardList, FolderKanban, UserCog, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-
-const LINKS = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Students', href: '/admin/students', icon: Users },
-  { name: 'Applications', href: '/admin/applications', icon: ClipboardList, badge: 3 },
-  { name: 'Courses', href: '/admin/courses', icon: BookOpen },
-  { name: 'Assignments', href: '/admin/assignments', icon: FileCheck, badge: 5 },
-  { name: 'Messages', href: '/admin/messages', icon: MessageSquare, badge: 1, badgeClass: 'bg-gold text-primary' },
-  { name: 'Documents', href: '/admin/documents', icon: FolderKanban },
-  { name: 'Admin Users', href: '/admin/users', icon: UserCog },
-  { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
-];
+import { useClerk } from '@clerk/nextjs';
 
 export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useClerk();
+  
+  const dashboard = useQuery(api.portal.adminDashboard) as any | undefined;
+  const metrics = dashboard?.metrics;
+  
+  const pendingCount = metrics?.pendingSubmissions ?? 0;
+  const unreadMessages = metrics?.unreadMessages ?? 0;
+  const newApplications = metrics?.newApplications ?? 0;
+
+  const LINKS = [
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Students', href: '/admin/students', icon: Users },
+    { name: 'Applications', href: '/admin/applications', icon: ClipboardList, badge: newApplications > 0 ? newApplications : undefined },
+    { name: 'Courses', href: '/admin/courses', icon: BookOpen },
+    { name: 'Assignments', href: '/admin/assignments', icon: FileCheck, badge: pendingCount > 0 ? pendingCount : undefined },
+    { name: 'Messages', href: '/admin/messages', icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages : undefined, badgeClass: 'bg-gold text-primary' },
+    { name: 'Documents', href: '/admin/documents', icon: FolderKanban },
+    { name: 'Admin Users', href: '/admin/users', icon: UserCog },
+    { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+  ];
+
+  const handleLogout = () => {
+    signOut(() => router.push('/'));
+  };
 
   const renderSidebarContent = (collapsed = false) => (
     <>
@@ -62,7 +78,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
                 <link.icon className="w-5 h-5 shrink-0" /> 
                 {!collapsed ? <span className="truncate">{link.name}</span> : null}
               </div>
-              {!collapsed && link.badge && (
+              {!collapsed && link.badge !== undefined && link.badge > 0 && (
                 <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full shrink-0", link.badgeClass || "bg-accent text-white")}>{link.badge}</span>
               )}
             </Link>
@@ -74,9 +90,9 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
         <Link href="/admin/settings" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
           <Settings className="w-5 h-5 shrink-0" /> {!collapsed ? 'Settings' : null}
         </Link>
-        <Link href="/" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
+        <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors w-full">
           <LogOut className="w-5 h-5 shrink-0" /> {!collapsed ? 'Logout' : null}
-        </Link>
+        </button>
       </div>
     </>
   );

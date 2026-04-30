@@ -2,22 +2,56 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Menu, X, LayoutDashboard, BookOpen, FileText, MessageSquare, User, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { useClerk } from '@clerk/nextjs';
 
-const LINKS = [
+type LinkItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: number;
+};
+
+const LINKS_DEFAULT: LinkItem[] = [
   { name: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
   { name: 'My Courses', href: '/student/courses', icon: BookOpen },
   { name: 'Assignments', href: '/student/assignments', icon: FileText },
-  { name: 'Messages', href: '/student/messages', icon: MessageSquare, badge: 2 },
+  { name: 'Messages', href: '/student/messages', icon: MessageSquare },
 ];
 
 export function StudentLayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useClerk();
+  
+  const dashboard = useQuery(api.portal.studentDashboard) as any | undefined;
+  const submissions = dashboard?.submissions ?? [];
+  const conversations = dashboard?.conversations ?? [];
+  
+  const pendingCount = submissions.filter((s: any) => s.status === 'pending_review').length;
+  const unreadMessages = conversations.filter((c: any) => c.unreadCount > 0).length;
+
+  const LINKS = LINKS_DEFAULT.map(link => {
+    if (link.name === 'Assignments') {
+      return { ...link, badge: pendingCount > 0 ? pendingCount : undefined };
+    }
+    if (link.name === 'Messages') {
+      return { ...link, badge: unreadMessages > 0 ? unreadMessages : undefined };
+    }
+    return link;
+  });
+
+  const handleLogout = () => {
+    signOut(() => router.push('/'));
+  };
 
   const renderSidebarContent = (collapsed = false) => (
     <>
@@ -57,9 +91,9 @@ export function StudentLayoutWrapper({ children }: { children: React.ReactNode }
                 <link.icon className="w-5 h-5" />
                 {!collapsed ? link.name : null}
               </div>
-              {!collapsed && link.badge ? (
+              {!collapsed && link.badge !== undefined && link.badge > 0 && (
                 <span className="bg-accent text-white text-xs font-bold px-2 py-0.5 rounded-full">{link.badge}</span>
-              ) : null}
+              )}
             </Link>
           );
         })}
@@ -69,9 +103,9 @@ export function StudentLayoutWrapper({ children }: { children: React.ReactNode }
         <Link href="/student/profile" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
           <User className="w-5 h-5" /> {!collapsed ? 'Profile' : null}
         </Link>
-        <Link href="/" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
+        <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors w-full">
           <LogOut className="w-5 h-5" /> {!collapsed ? 'Logout' : null}
-        </Link>
+        </button>
       </div>
     </>
   );
