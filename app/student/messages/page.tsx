@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useToast } from '@/components/ui/toast';
-import { studentThreads } from '@/lib/portal-data';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
@@ -23,7 +22,7 @@ export default function StudentMessages() {
     lastMessage: conversation.lastMessage?.body ?? 'No messages yet.',
     time: conversation.lastMessageAt ? new Date(conversation.lastMessageAt).toLocaleString() : 'New thread',
     isLive: true,
-  })) ?? studentThreads.map((thread) => ({ ...thread, isLive: false }));
+  })) ?? [];
   const thread = threads.find((item) => item.id === selectedId) ?? threads[0];
   const liveMessages = useQuery(api.messages.listMessages, thread?.isLive ? { conversationId: thread.id as any } : 'skip') as any[] | undefined;
   const messages = thread?.isLive

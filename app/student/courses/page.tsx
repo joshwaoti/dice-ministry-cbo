@@ -5,7 +5,6 @@ import { useQuery } from 'convex/react';
 import { BookOpenCheck, Clock3, GraduationCap } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
-import { courseCatalog } from '@/lib/portal-data';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { Button } from '@/components/ui/button';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
@@ -21,7 +20,7 @@ export default function StudentCourses() {
   const courses = liveCourses?.map((enrollment) => ({
     id: enrollment.course?._id ?? enrollment.courseId,
     title: enrollment.course?.title ?? 'Untitled course',
-    synopsis: enrollment.course?.synopsis ?? 'Course description will appear here.',
+    synopsis: enrollment.course?.synopsis ?? '',
     unitCount: 0,
     progress: enrollment.progressPercent ?? 0,
     duration: 'Self-paced',
@@ -29,7 +28,7 @@ export default function StudentCourses() {
     nextUnit: 'Open course outline',
     badges: [enrollment.status],
     isLive: true,
-  })) ?? courseCatalog.map((course) => ({ ...course, isLive: false }));
+  })) ?? [];
   const { pageItems, totalPages } = paginate(courses, page, PAGE_SIZE);
 
   return (

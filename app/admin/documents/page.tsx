@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { documents } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
@@ -23,8 +22,7 @@ export default function AdminDocumentsPage() {
   const liveDocuments = useQuery(api.documents.listAdminLibrary) as any[] | undefined;
   const createDocument = useMutation(api.documents.createAdminDocument);
   const removeDocument = useMutation(api.documents.removeAdminDocument);
-  const normalizedDocuments =
-    liveDocuments?.map((document) => ({
+  const normalizedDocuments = liveDocuments?.map((document) => ({
       id: document._id,
       name: document.name,
       category: document.category,
@@ -32,7 +30,7 @@ export default function AdminDocumentsPage() {
       access: document.access.replaceAll('_', ' '),
       updated: new Date(document.updatedAt).toLocaleDateString(),
       isLive: true,
-    })) ?? documents.map((document) => ({ ...document, isLive: false }));
+    })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedDocuments, page, PAGE_SIZE);
 
   const handleCreate = async () => {

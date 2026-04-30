@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { CheckCircle2, Download, Eye, FileText, MessageSquareMore, RotateCcw, UploadCloud } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
-import { assignments, students } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
@@ -29,31 +28,6 @@ type ReviewItem = {
   isLive: boolean;
 };
 
-const fallbackReviewQueue: ReviewItem[] = [
-  {
-    id: 'mock-1',
-    learner: { id: students[1].id, name: students[1].name },
-    assignment: { id: assignments[0].id, title: assignments[0].title, course: assignments[0].course, due: assignments[0].due, format: assignments[0].format },
-    submitted: 'Today, 8:44 AM',
-    note: 'I reflected on grace and how it changed my relationship with prayer.',
-    score: '',
-    fileName: 'reflection-essay.pdf',
-    status: 'pending_review',
-    isLive: false,
-  },
-  {
-    id: 'mock-2',
-    learner: { id: students[2].id, name: students[2].name },
-    assignment: { id: assignments[1].id, title: assignments[1].title, course: assignments[1].course, due: assignments[1].due, format: assignments[1].format },
-    submitted: 'Yesterday, 5:10 PM',
-    note: 'Attached the worksheet and my career mapping draft.',
-    score: '',
-    fileName: 'career-map.pdf',
-    status: 'pending_review',
-    isLive: false,
-  },
-];
-
 export default function AdminAssignmentsPage() {
   const liveSubmissions = useQuery(api.assignments.listSubmissions, {}) as any[] | undefined;
   const reviewSubmission = useMutation(api.assignments.reviewSubmission);
@@ -71,12 +45,12 @@ export default function AdminAssignmentsPage() {
       format: submission.assignment?.allowedTypes?.join(', ').toUpperCase() ?? 'PDF, DOCX, TXT',
     },
     submitted: submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : 'Not submitted',
-    note: submission.notes ?? 'No student note was included with this submission.',
+    note: submission.notes ?? '',
     score: submission.grade ?? '',
     fileName: submission.fileName,
     status: submission.status,
     isLive: true,
-  })) ?? fallbackReviewQueue;
+  })) ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [score, setScore] = useState('88 / 100');

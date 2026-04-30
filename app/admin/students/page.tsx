@@ -16,7 +16,6 @@ import {
   UserPlus,
   Users2,
 } from 'lucide-react';
-import { applications, students } from '@/lib/portal-data';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -37,14 +36,13 @@ export default function AdminStudentsPage() {
   const liveStudents = useQuery(api.students.list) as any[] | undefined;
   const liveApplications = useQuery(api.applications.list, {}) as any[] | undefined;
   const approveApplication = useMutation(api.applications.approve);
-  const roster =
-    liveStudents?.map((student) => {
+  const roster = liveStudents?.map((student) => {
       const profile = student.profile ?? {};
       return {
         id: student._id,
-        initials: (profile.name ?? 'Student').split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
+        initials: (profile.name ?? '').split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase() || 'ST',
         name: profile.name ?? 'Unnamed student',
-        email: profile.email ?? 'No email',
+        email: profile.email ?? '',
         cohort: student.cohort?.name ?? 'Unassigned',
         progress: student.progressPercent ?? 0,
         status: student.enrollmentStatus === 'active' ? 'Active' : student.enrollmentStatus === 'pending_invite' ? 'New Admit' : student.enrollmentStatus,
@@ -52,16 +50,15 @@ export default function AdminStudentsPage() {
         mentor: student.mentorProfileId ? 'Assigned mentor' : 'Unassigned',
         isLive: true,
       };
-    }) ?? students.map((student) => ({ ...student, isLive: false }));
-  const applicationQueue =
-    liveApplications?.map((application) => ({
+    }) ?? [];
+  const applicationQueue = liveApplications?.map((application) => ({
       id: application._id,
       name: application.fullName,
-      school: application.highSchool ?? 'Not provided',
+      school: application.highSchool ?? '',
       status: application.status === 'accepted' ? 'Approved' : application.status,
       submitted: new Date(application.submittedAt).toLocaleDateString(),
       isLive: true,
-    })) ?? applications.map((application) => ({ ...application, isLive: false }));
+    })) ?? [];
 
   const totalPages = Math.max(1, Math.ceil(roster.length / PAGE_SIZE));
   const paginatedStudents = useMemo(() => {

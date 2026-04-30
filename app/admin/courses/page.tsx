@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { BookOpenCheck, Layers3, PencilLine, PlusCircle, Sparkles, Upload } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { courses } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
@@ -31,8 +30,7 @@ export default function AdminCoursesPage() {
   const duplicateCourse = useMutation(api.courses.duplicate);
   const archiveCourse = useMutation(api.courses.archive);
 
-  const normalizedCourses =
-    liveCourses?.map((course) => ({
+  const normalizedCourses = liveCourses?.map((course) => ({
       id: course._id,
       title: course.title,
       status: course.status === 'published' ? 'Published' : course.status === 'archived' ? 'Archived' : 'Draft',
@@ -42,7 +40,7 @@ export default function AdminCoursesPage() {
       students: course.studentCount ?? 0,
       updated: new Date(course.updatedAt).toLocaleDateString(),
       isLive: true,
-    })) ?? courses.map((course) => ({ ...course, isLive: false }));
+    })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedCourses, page, PAGE_SIZE);
 
   const handleCreate = async () => {

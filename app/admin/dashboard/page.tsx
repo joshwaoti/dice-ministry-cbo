@@ -17,20 +17,8 @@ import { useToast } from '@/components/ui/toast';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-
-const STATIC_ENROLLMENT_DATA = [
-  { name: 'Jan', count: 12 }, { name: 'Feb', count: 19 }, { name: 'Mar', count: 15 },
-  { name: 'Apr', count: 22 }, { name: 'May', count: 28 }, { name: 'Jun', count: 35 },
-  { name: 'Jul', count: 42 }, { name: 'Aug', count: 38 }, { name: 'Sep', count: 45 },
-  { name: 'Oct', count: 52 }, { name: 'Nov', count: 60 }, { name: 'Dec', count: 75 },
-];
-
-const STATIC_COMPLETION_DATA = [
-  { course: 'Discipleship 101', percent: 85 },
-  { course: 'Career Guidance', percent: 62 },
-  { course: 'Digital Literacy', percent: 90 },
-  { course: 'Theology Basics', percent: 45 },
-];
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
 export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -46,16 +34,11 @@ export default function AdminDashboard() {
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementBody, setAnnouncementBody] = useState('');
 
-  const enrollmentData = dashboard?.enrollmentData?.length ? dashboard.enrollmentData : STATIC_ENROLLMENT_DATA;
-  const liveCompletionData = dashboard?.completionData?.length ? dashboard.completionData : STATIC_COMPLETION_DATA;
+  const enrollmentData = dashboard?.enrollmentData ?? [];
+  const liveCompletionData = dashboard?.completionData ?? [];
 
   const recentActivityData = useMemo(() => {
     const activities = dashboard?.recentActivity ?? [];
-    if (!activities.length) {
-      return [
-        { type: 'completion', name: 'System', action: 'waiting for activity', course: 'Connect backend', time: 'Never', color: 'bg-gray-400' },
-      ];
-    }
     return activities.slice(0, 5).map((activity: any) => {
       const timeAgo = activity.time ? Math.floor((Date.now() - activity.time) / 60000) : 0;
       let time = 'Just now';
@@ -72,16 +55,18 @@ export default function AdminDashboard() {
     });
   }, [dashboard?.recentActivity]);
 
-  const metrics = [
+  const hasMetrics = dashboard !== undefined;
+
+  const metrics = hasMetrics ? [
     { label: 'Total Students', value: String(liveMetrics?.students ?? 0), subLabel: `${liveMetrics?.activeThisWeek ?? 0} active this week`, subColor: 'text-green-600', icon: Users, href: '/admin/students' },
     { label: 'Total Courses', value: String(liveMetrics?.activeCourses ?? 0), subLabel: `${liveMetrics?.draftCourses ?? 0} in draft`, subColor: 'text-amber-600', icon: BookOpen, href: '/admin/courses' },
-    { label: 'Assignments Pending', value: String(liveMetrics?.pendingSubmissions ?? 0), subLabel: 'Requires attention', subColor: 'text-accent', icon: FileCheck, href: '/admin/assignments?status=pending', badge: true },
+    { label: 'Assignments Pending', value: String(liveMetrics?.pendingSubmissions ?? 0), subLabel: 'Requires attention', subColor: 'text-accent', icon: FileCheck, href: '/admin/assignments?status=pending', badge: !!liveMetrics?.pendingSubmissions },
     { label: 'Active This Week', value: String(liveMetrics?.activeThisWeek ?? 0), subLabel: 'Live from student activity', subColor: 'text-green-600', icon: Activity, href: '/admin/students?filter=active', trend: 'up' },
-    { label: 'Unread Messages', value: String(liveMetrics?.unreadMessages ?? 0), subLabel: 'Across conversations', subColor: 'text-accent', icon: MessageSquare, href: '/admin/messages', badge: liveMetrics?.unreadMessages > 0 },
+    { label: 'Unread Messages', value: String(liveMetrics?.unreadMessages ?? 0), subLabel: 'Across conversations', subColor: 'text-accent', icon: MessageSquare, href: '/admin/messages', badge: !!liveMetrics?.unreadMessages },
     { label: 'Applications', value: String(liveMetrics?.applications ?? 0), subLabel: `${liveMetrics?.newApplications ?? 0} unreviewed`, subColor: 'text-primary', icon: ClipboardList, href: '/admin/applications' },
     { label: 'Course Completion', value: `${liveMetrics?.avgCompletion ?? 0}%`, subLabel: 'Average across all', subColor: 'text-muted', icon: PieChart, href: '#' },
     { label: 'Announcements', value: String(liveMetrics?.announcements ?? 0), subLabel: 'Published and drafts', subColor: 'text-muted', icon: Calendar, href: '/admin/announcements' },
-  ];
+  ] : [];
 
   const handleAddStudent = async () => {
     if (!studentName.trim() || !studentEmail.trim()) {

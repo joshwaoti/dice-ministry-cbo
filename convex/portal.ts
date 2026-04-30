@@ -30,7 +30,7 @@ export const adminDashboard = query({
         const monthCreated = new Date(created).toLocaleString('default', { month: 'short' });
         return monthCreated === month;
       }).length;
-      return { name: month, count: count || Math.floor(Math.random() * 20) + 5 };
+      return { name: month, count };
     });
 
     const recentActivity = [

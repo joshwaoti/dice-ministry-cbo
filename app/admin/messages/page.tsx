@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { BadgeCheck, BookText, Send, UserRoundSearch } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
-import { adminThreads } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,10 +32,8 @@ export default function AdminMessagesPage() {
     lastMessage: conversation.lastMessage?.body ?? 'No messages yet.',
     time: conversation.lastMessageAt ? new Date(conversation.lastMessageAt).toLocaleString() : 'New thread',
     isLive: true,
-  })) ?? adminThreads.map((thread) => ({ ...thread, isLive: false }));
-  
-  const availableThreads = liveConversations !== undefined ? threads : [];
-  const filteredThreads = availableThreads.filter((thread) => `${thread.name} ${thread.subject} ${thread.lastMessage}`.toLowerCase().includes(search.toLowerCase()));
+  })) ?? [];
+  const filteredThreads = threads.filter((thread) => `${thread.name} ${thread.subject} ${thread.lastMessage}`.toLowerCase().includes(search.toLowerCase()));
   const { pageItems, totalPages } = paginate(filteredThreads, page, PAGE_SIZE);
   const thread = filteredThreads.find((item) => item.id === selectedId) ?? filteredThreads[0];
   const liveMessages = useQuery(api.messages.listMessages, thread?.isLive ? { conversationId: thread.id as any } : 'skip') as any[] | undefined;

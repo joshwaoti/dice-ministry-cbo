@@ -4,7 +4,6 @@ import { ClipboardCheck, Download, MailQuestion, UserRoundPlus } from 'lucide-re
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useState } from 'react';
-import { applications } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { Button } from '@/components/ui/button';
@@ -34,19 +33,17 @@ export default function AdminApplicationsPage() {
   const invitationJobs = useQuery(api.invitations.listJobs, {}) as any[] | undefined;
   const approveApplication = useMutation(api.applications.approve);
   const invitationByApplication = new Map((invitationJobs ?? []).map((job) => [job.applicationId, job]));
-  const reviewQueue: ReviewApplication[] =
-    liveApplications?.map((application) => ({
+  const reviewQueue: ReviewApplication[] = liveApplications?.map((application) => ({
       id: application._id,
       name: application.fullName,
-      school: application.highSchool ?? 'Not provided',
+      school: application.highSchool ?? '',
       status: application.status === 'accepted' ? 'Approved' : application.status === 'under_review' ? 'Under Review' : application.status,
       submitted: new Date(application.submittedAt).toLocaleDateString(),
       track: 'Ignite',
       documents: [],
       invitation: invitationByApplication.get(application._id),
       isLive: true,
-    })) ??
-    applications.map((application) => ({ ...application, invitation: null, isLive: false }));
+    })) ?? [];
   const { pageItems, totalPages } = paginate(reviewQueue, page, PAGE_SIZE);
 
   const handleApprove = async (application: (typeof reviewQueue)[number]) => {

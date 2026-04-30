@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { adminUsers } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -29,8 +28,7 @@ export default function AdminUsersPage() {
   const liveUsers = useQuery(api.adminUsers.list) as any[] | undefined;
   const inviteAdmin = useMutation(api.adminUsers.inviteAdmin);
   const updateStatus = useMutation(api.adminUsers.updateStatus);
-  const normalizedUsers =
-    liveUsers?.map((user) => ({
+  const normalizedUsers = liveUsers?.map((user) => ({
       id: user._id,
       name: user.name,
       email: user.email,
@@ -38,7 +36,7 @@ export default function AdminUsersPage() {
       scope: 'Portal access',
       status: user.status === 'active' ? 'Active' : user.status === 'suspended' ? 'Suspended' : 'Pending Invite',
       isLive: true,
-    })) ?? adminUsers.map((user) => ({ ...user, isLive: false }));
+    })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedUsers, page, PAGE_SIZE);
 
   const handleInvite = async () => {
