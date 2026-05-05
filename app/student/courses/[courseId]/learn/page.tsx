@@ -2,13 +2,14 @@
 
 import { use, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { CheckCircle2, ChevronLeft, FileText, Menu, Save, X } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { getCourseById } from '@/lib/portal-data';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+import { useToast } from '@/components/ui/toast';
 
 function canQueryConvexId(id: string) {
   return id.length > 20 && !id.includes('-');
@@ -17,8 +18,10 @@ function canQueryConvexId(id: string) {
 export default function CoursePlayerPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
   const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
-  const fallbackCourse = getCourseById(courseId);
+  const saveUnitNote = useMutation(api.courses.saveUnitNote);
+  const { toast } = useToast();
   const firstLiveUnit = liveCourse?.modules?.[0]?.units?.[0];
+  const note = useQuery(api.courses.getUnitNote, firstLiveUnit ? { courseId: courseId as any, unitId: firstLiveUnit._id as any } : 'skip') as any | undefined;
   const course = liveCourse
     ? {
         id: liveCourse._id,
@@ -38,12 +41,20 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
           })),
         })),
       }
-    : { ...fallbackCourse, lessonBody: 'Welcome to this lesson surface. It is designed for focused reading, scripture engagement, downloadable documents, and private notes.' };
+    : null;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [noteBody, setNoteBody] = useState('');
+  const visibleNote = noteBody || note?.body || '';
+
+  if (canQueryConvexId(courseId) && liveCourse === undefined) {
+    return <LoadingPortalState label="Loading lesson reader..." />;
+  }
+  if (!course || !firstLiveUnit) {
+    return <EmptyPortalState variant="learning" title="No lesson reader available" description="This course needs at least one published unit before the reader can open." />;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-slate-900 border-x border-[#1e293b]">
-      {canQueryConvexId(courseId) && liveCourse === undefined ? <LoadingPortalState label="Loading lesson reader..." /> : null}
       <header className="h-16 border-b border-white/10 shrink-0 flex items-center justify-between px-4 lg:px-6 z-20 bg-slate-900">
         <div className="flex items-center gap-4">
           <Link href={`/student/courses/${course.id}`} className="text-white/60 hover:text-white transition-colors">
@@ -106,9 +117,19 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
               <Textarea
                 placeholder="Type your notes here. Press Enter for a new line. Your notes are saved automatically..."
                 className="bg-slate-900 border-white/10 text-white min-h-[150px] resize-none focus-visible:ring-accent/50"
+                value={visibleNote}
+                onChange={(event) => setNoteBody(event.target.value)}
               />
               <div className="flex justify-end mt-4">
-                <Button size="sm" className="bg-slate-700 hover:bg-slate-600 border-none text-white">
+                <Button
+                  size="sm"
+                  className="bg-slate-700 hover:bg-slate-600 border-none text-white"
+                  onClick={async () => {
+                    await saveUnitNote({ courseId: course.id as any, unitId: firstLiveUnit._id as any, body: visibleNote });
+                    setNoteBody('');
+                    toast({ title: 'Notes saved', description: 'Your private lesson notes were saved to Convex.', tone: 'success' });
+                  }}
+                >
                   <Save className="w-4 h-4 mr-2" /> Save Notes
                 </Button>
               </div>

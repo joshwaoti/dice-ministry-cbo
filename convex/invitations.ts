@@ -127,7 +127,7 @@ export const processQueue = action({
         },
         body: JSON.stringify({
           email_address: job.email,
-          redirect_url: `${appUrl.replace(/\/$/, '')}/login`,
+          redirect_url: `${appUrl.replace(/\/$/, '')}/accept-invitation`,
           notify: true,
           ignore_existing: true,
           public_metadata: {

@@ -17,7 +17,17 @@ async function approveApplication(
 
   const application = await ctx.db.get(args.applicationId);
   if (!application) throw new ConvexError('Application not found.');
-  if (application.status === 'accepted') throw new ConvexError('Application is already accepted.');
+  if (application.status === 'accepted') {
+    const existingStudent = await ctx.db
+      .query('studentProfiles')
+      .withIndex('by_application', (q) => q.eq('applicationId', args.applicationId))
+      .unique();
+    const existingJob = await ctx.db
+      .query('studentInvitationJobs')
+      .withIndex('by_application', (q) => q.eq('applicationId', args.applicationId))
+      .first();
+    return { studentProfileId: existingStudent?._id, invitationStatus: existingJob?.status ?? 'already_accepted' };
+  }
 
   const now = Date.now();
   const email = normalizeEmail(application.email);
@@ -57,6 +67,7 @@ async function approveApplication(
       profileId,
       applicationId: args.applicationId,
       studentCode: studentCodeFromApplication(args.applicationId),
+      programTrack: 'Ignite',
       cohortId: args.cohortId,
       enrollmentStatus: 'pending_invite',
       mentorProfileId: args.mentorProfileId,

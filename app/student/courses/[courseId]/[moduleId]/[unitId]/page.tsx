@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
-import { getCourseById } from '@/lib/portal-data';
 import { useToast } from '@/components/ui/toast';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
@@ -19,7 +18,9 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
   const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
   const markComplete = useMutation(api.courses.markUnitComplete);
   const { toast } = useToast();
-  const fallbackCourse = getCourseById(courseId);
+  if (canQueryConvexId(courseId) && liveCourse === undefined) {
+    return <LoadingPortalState label="Loading unit..." />;
+  }
   const course = liveCourse
     ? {
         id: liveCourse._id,
@@ -34,7 +35,10 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
           })),
         })),
       }
-    : fallbackCourse;
+    : { id: courseId, modules: [] };
+  if (course.modules.length === 0) {
+    return <EmptyPortalState variant="learning" title="No lesson content yet" description="Published document lessons will appear here after this course is assigned and populated." />;
+  }
   const selectedModule = course.modules.find((entry: any) => entry.id === moduleId) ?? course.modules[0];
   const activeUnit = selectedModule.units.find((entry: any) => entry.id === unitId) ?? selectedModule.units[0];
   const currentIndex = selectedModule.units.findIndex((entry: any) => entry.id === activeUnit.id);

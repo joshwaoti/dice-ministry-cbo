@@ -25,6 +25,8 @@ export default function AdminDashboard() {
   useEffect(() => { setTimeout(() => setMounted(true), 0) }, []);
   const dashboard = useQuery(api.portal.adminDashboard) as any | undefined;
   const liveMetrics = dashboard?.metrics;
+  const submitApplication = useMutation(api.applications.submitApplication);
+  const createAnnouncement = useMutation(api.announcements.create);
   const { toast } = useToast();
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
@@ -40,10 +42,7 @@ export default function AdminDashboard() {
   const recentActivityData = useMemo(() => {
     const activities = dashboard?.recentActivity ?? [];
     return activities.slice(0, 5).map((activity: any) => {
-      const timeAgo = activity.time ? Math.floor((Date.now() - activity.time) / 60000) : 0;
-      let time = 'Just now';
-      if (timeAgo > 60) time = `${Math.floor(timeAgo / 60)} hours ago`;
-      if (timeAgo > 1440) time = `${Math.floor(timeAgo / 1440)} days ago`;
+      const time = activity.time ? new Date(activity.time).toLocaleString() : 'Just now';
       return {
         type: activity.type,
         name: 'Student',
@@ -73,7 +72,13 @@ export default function AdminDashboard() {
       toast({ title: 'Required fields', description: 'Name and email are required.', tone: 'warning' });
       return;
     }
-    toast({ title: 'Student added', description: `${studentName} can now access the portal.`, tone: 'success' });
+    await submitApplication({
+      fullName: studentName,
+      email: studentEmail,
+      phone: studentPhone || 'Not provided',
+      motivation: 'Created from admin dashboard quick intake.',
+    });
+    toast({ title: 'Application created', description: `${studentName} is now in the application review queue. Approve them to send a Clerk invite.`, tone: 'success' });
     setStudentName('');
     setStudentEmail('');
     setStudentPhone('');
@@ -85,7 +90,8 @@ export default function AdminDashboard() {
       toast({ title: 'Required fields', description: 'Title and body are required.', tone: 'warning' });
       return;
     }
-    toast({ title: 'Announcement created', description: 'Your announcement has been published.', tone: 'success' });
+    await createAnnouncement({ title: announcementTitle, body: announcementBody, audience: 'students' });
+    toast({ title: 'Announcement created', description: 'Your announcement has been published to students.', tone: 'success' });
     setAnnouncementTitle('');
     setAnnouncementBody('');
     setShowAnnouncement(false);
@@ -140,7 +146,7 @@ export default function AdminDashboard() {
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" onClick={() => setShowAddStudent(true)}>
-            <PlusCircle className="mr-2 w-4 h-4 group-hover:rotate-90 transition-transform" /> Add Student
+            <PlusCircle className="mr-2 w-4 h-4 group-hover:rotate-90 transition-transform" /> Create Application
           </Button>
           <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
             <Link href="/admin/courses"><BookOpen className="mr-2 w-4 h-4" /> Create Course</Link>
@@ -153,8 +159,10 @@ export default function AdminDashboard() {
               <FileCheck className="mr-2 w-4 h-4" /> Review Assignments
             </Link>
           </Button>
-          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" onClick={() => toast({ title: 'Export ready', description: 'Export functionality available in relevant sections.', tone: 'info' })}>
+          <Button variant="outline" className="rounded-xl border-border hover:bg-orange-50 hover:text-accent hover:border-accent group transition-all" asChild>
+            <Link href="/admin/applications">
             <Download className="mr-2 w-4 h-4" /> Export Data
+            </Link>
           </Button>
         </div>
       </div>
@@ -221,7 +229,7 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-display font-bold text-primary">Recent Activity</h2>
-            <button className="text-sm text-accent hover:underline font-medium" onClick={() => toast({ title: 'Marked all read', description: 'All activities marked as read.', tone: 'success' })}>Mark all as read</button>
+            <Link href="/admin/messages" className="text-sm text-accent hover:underline font-medium">Open messages</Link>
           </div>
           
           <div className="space-y-4">
@@ -238,18 +246,18 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          <Button variant="outline" className="w-full mt-4 rounded-xl text-muted font-medium">
-            Show 10 more activities
+          <Button variant="outline" className="w-full mt-4 rounded-xl text-muted font-medium" asChild>
+            <Link href="/admin/assignments">Open review queue</Link>
           </Button>
         </div>
       </div>
 
-      {/* ADD STUDENT DIALOG */}
+      {/* CREATE APPLICATION DIALOG */}
       <PortalDialog
         open={showAddStudent}
         onClose={() => setShowAddStudent(false)}
-        title="Add Student"
-        description="Add a new student to the portal. An invitation will be sent automatically."
+        title="Create Application"
+        description="Create an Ignite application record. Approval still happens in the admissions queue before any Clerk invite is sent."
       >
         <div className="space-y-4">
           <Input placeholder="Full name" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
@@ -257,7 +265,7 @@ export default function AdminDashboard() {
           <Input placeholder="Phone number (optional)" type="tel" value={studentPhone} onChange={(e) => setStudentPhone(e.target.value)} />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={() => setShowAddStudent(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleAddStudent}>Add Student</Button>
+            <Button variant="primary" onClick={handleAddStudent}>Create Application</Button>
           </div>
         </div>
       </PortalDialog>

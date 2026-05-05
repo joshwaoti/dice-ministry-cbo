@@ -29,6 +29,8 @@ export default function AdminCoursesPage() {
   const createCourse = useMutation(api.courses.create);
   const duplicateCourse = useMutation(api.courses.duplicate);
   const archiveCourse = useMutation(api.courses.archive);
+  const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
+  const createAdminDocument = useMutation(api.documents.createAdminDocument);
 
   const normalizedCourses = liveCourses?.map((course) => ({
       id: course._id,
@@ -63,7 +65,7 @@ export default function AdminCoursesPage() {
         description="Create structured courses, manage modules and units, and keep publishing quality aligned with the PRD."
         actions={
           <>
-            <Button variant="outline" onClick={() => toast({ title: 'Outline import ready', description: 'Drop a DOCX or PDF teaching outline to scaffold a draft course.', tone: 'info' })}>
+            <Button variant="outline" onClick={() => setOpen(true)}>
               <Upload className="mr-2 h-4 w-4" /> Import Outline
             </Button>
             <Button variant="primary" onClick={() => setOpen(true)}>
@@ -197,6 +199,20 @@ export default function AdminCoursesPage() {
               title="Seed with teaching documents"
               description="Attach an outline, handbook, or lesson notes so the team can scaffold content quickly."
               accepted="PDF or DOCX"
+              accept=".pdf,.doc,.docx,.txt"
+              generateUploadUrl={generateUploadUrl}
+              onUploaded={async (file) => {
+                await createAdminDocument({
+                  name: file.fileName,
+                  category: 'course_outline',
+                  access: 'instructors',
+                  storageId: file.storageId as any,
+                  fileName: file.fileName,
+                  contentType: file.contentType,
+                  size: file.size,
+                });
+                toast({ title: 'Outline uploaded', description: `${file.fileName} was saved in the instructor document library.`, tone: 'success' });
+              }}
             />
             <div className="rounded-2xl border border-border bg-surface p-4 text-sm text-muted-foreground">
               Each draft course starts with module and unit placeholders, autosave support, and assignment restriction controls.

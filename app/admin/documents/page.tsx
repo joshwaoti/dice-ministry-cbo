@@ -22,6 +22,7 @@ export default function AdminDocumentsPage() {
   const liveDocuments = useQuery(api.documents.listAdminLibrary) as any[] | undefined;
   const createDocument = useMutation(api.documents.createAdminDocument);
   const removeDocument = useMutation(api.documents.removeAdminDocument);
+  const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
   const normalizedDocuments = liveDocuments?.map((document) => ({
       id: document._id,
       name: document.name,
@@ -29,6 +30,8 @@ export default function AdminDocumentsPage() {
       owner: document.owner?.name ?? 'Admin team',
       access: document.access.replaceAll('_', ' '),
       updated: new Date(document.updatedAt).toLocaleDateString(),
+      storageId: document.storageId,
+      fileName: document.fileName,
       isLive: true,
     })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedDocuments, page, PAGE_SIZE);
@@ -49,14 +52,28 @@ export default function AdminDocumentsPage() {
         eyebrow="Admin Portal"
         title="Document Library"
         description="Upload admissions packets, handbooks, and reporting templates, and control who can access each file."
-        actions={<Button variant="outline" onClick={() => toast({ title: 'Folder created', description: 'A new category folder is ready for documents and uploads.', tone: 'success' })}><FolderOpenDot className="mr-2 h-4 w-4" /> New Folder</Button>}
+        actions={<Button variant="outline" onClick={() => setNewName('New Category Folder')}><FolderOpenDot className="mr-2 h-4 w-4" /> New Folder</Button>}
       />
 
       <UploadDropzone
         title="Upload documents"
         description="This shared admin library supports admissions packets, mentor handbooks, reporting templates, and other operational files."
         accepted="PDF, DOCX, XLSX up to 20MB"
+        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.xlsx,.pptx"
         helper="Every uploaded file can later be linked to an assignment, student profile, or admin notice."
+        generateUploadUrl={generateUploadUrl}
+        multiple
+        onUploaded={async (file) => {
+          await createDocument({
+            name: file.fileName,
+            category: 'General',
+            access: 'admin_team',
+            storageId: file.storageId as any,
+            fileName: file.fileName,
+            contentType: file.contentType,
+            size: file.size,
+          });
+        }}
       />
 
       <div className="rounded-3xl border border-border bg-white p-4 shadow-sm">
@@ -106,7 +123,7 @@ export default function AdminDocumentsPage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => toast({ title: 'Metadata updated', description: `${document.name} can now be reclassified or relinked.`, tone: 'info' })}>Edit</Button>
-                <Button size="sm" variant="outline" onClick={() => toast({ title: 'Download started', description: `${document.name} is downloading.`, tone: 'info' })}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                <DocumentDownloadButton storageId={document.storageId} />
                 <Button
                   size="sm"
                   variant="outline"
@@ -147,7 +164,7 @@ export default function AdminDocumentsPage() {
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => toast({ title: 'Metadata updated', description: `${document.name} can now be reclassified or relinked.`, tone: 'info' })}>Edit</Button>
-                      <Button size="sm" variant="outline" onClick={() => toast({ title: 'Download started', description: `${document.name} is downloading.`, tone: 'info' })}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                      <DocumentDownloadButton storageId={document.storageId} />
                       <Button
                         size="sm"
                         variant="outline"
@@ -175,5 +192,21 @@ export default function AdminDocumentsPage() {
         action={<div className="mt-5"><Button variant="primary" onClick={() => toast({ title: 'Upload queue opened', description: 'Select a folder or student before attaching new files.', tone: 'success' })}><Upload className="mr-2 h-4 w-4" /> Start Upload</Button></div>}
       />
     </div>
+  );
+}
+
+function DocumentDownloadButton({ storageId }: { storageId?: string }) {
+  const url = useQuery(api.documents.getUrl, storageId ? { storageId: storageId as any } : 'skip') as string | null | undefined;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!url}
+      onClick={() => {
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }}
+    >
+      <Download className="mr-2 h-4 w-4" /> Download
+    </Button>
   );
 }

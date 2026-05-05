@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { CheckCircle2, Download, Eye, FileText, MessageSquareMore, RotateCcw, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Download, Eye, FileText, MessageSquareMore, RotateCcw } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -24,6 +24,8 @@ type ReviewItem = {
   note: string;
   score: string;
   fileName?: string;
+  storageId?: string;
+  size?: number;
   status: string;
   isLive: boolean;
 };
@@ -31,6 +33,8 @@ type ReviewItem = {
 export default function AdminAssignmentsPage() {
   const liveSubmissions = useQuery(api.assignments.listSubmissions, {}) as any[] | undefined;
   const reviewSubmission = useMutation(api.assignments.reviewSubmission);
+  const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
+  const createAdminDocument = useMutation(api.documents.createAdminDocument);
   const reviewQueue: ReviewItem[] = liveSubmissions?.map((submission) => ({
     id: submission._id,
     learner: {
@@ -48,6 +52,8 @@ export default function AdminAssignmentsPage() {
     note: submission.notes ?? '',
     score: submission.grade ?? '',
     fileName: submission.fileName,
+    storageId: submission.storageId,
+    size: submission.size,
     status: submission.status,
     isLive: true,
   })) ?? [];
@@ -59,12 +65,22 @@ export default function AdminAssignmentsPage() {
   const { pageItems, totalPages } = paginate(reviewQueue, page, PAGE_SIZE);
   const selected = reviewQueue.find((item) => item.id === selectedId) ?? reviewQueue[0];
 
+  const handleExport = () => {
+    const rows = [
+      ['Learner', 'Assignment', 'Course', 'Status', 'Submitted', 'Grade'],
+      ...reviewQueue.map((item) => [item.learner.name, item.assignment.title, item.assignment.course, item.status, item.submitted, item.score]),
+    ];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `assignment-review-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleReview = async (status: 'pass' | 'needs_revision' | 'pending_review') => {
     if (!selected) return;
-    if (!selected.isLive) {
-      toast({ title: status === 'pass' ? 'Submission approved' : 'Feedback draft saved', description: 'Live Convex submissions will persist grades and feedback here.', tone: status === 'pass' ? 'success' : 'info' });
-      return;
-    }
     await reviewSubmission({ submissionId: selected.id as any, status, grade: score, comment: feedback, notifyStudent: true });
     toast({ title: status === 'pass' ? 'Submission approved' : 'Submission updated', description: 'The grade and feedback were saved to Convex and published to the learner portal.', tone: status === 'pass' ? 'success' : 'info' });
   };
@@ -76,7 +92,7 @@ export default function AdminAssignmentsPage() {
         title="Assignment Review"
         description="Review submissions, open uploaded documents, return feedback, and keep instructors aligned on grading."
         actions={
-          <Button variant="outline" onClick={() => toast({ title: 'Export queued', description: 'A grading report will be generated for the current filters.', tone: 'info' })}>
+          <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" /> Export Queue
           </Button>
         }
@@ -134,12 +150,8 @@ export default function AdminAssignmentsPage() {
                 <p className="mt-2 text-sm text-muted-foreground">Submitted by {selected.learner.name} on {selected.submitted}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => toast({ title: 'Document opened', description: 'Submission preview launched in a new review tab.', tone: 'info' })}>
-                  <Eye className="mr-2 h-4 w-4" /> View Document
-                </Button>
-                <Button variant="outline" onClick={() => toast({ title: 'Original file downloaded', description: 'The learner submission package has been downloaded.', tone: 'info' })}>
-                  <Download className="mr-2 h-4 w-4" /> Download
-                </Button>
+                <SubmissionDownloadButton storageId={selected.storageId} label="View Document" icon="view" />
+                <SubmissionDownloadButton storageId={selected.storageId} label="Download" />
               </div>
             </div>
 
@@ -165,10 +177,10 @@ export default function AdminAssignmentsPage() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-semibold text-primary">Submission Summary</h3>
-                  <p className="text-sm text-muted-foreground">A static document card is shown here to represent the uploaded learner file, file size, and stored URL actions.</p>
+                  <p className="text-sm text-muted-foreground">Stored submission file and metadata from Convex.</p>
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-primary">{selected.fileName ?? 'reflection-essay.pdf'}</span>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-primary">2.4 MB</span>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-primary">{selected.size ? `${(selected.size / 1024 / 1024).toFixed(2)} MB` : 'Size unavailable'}</span>
                   </div>
                 </div>
               </div>
@@ -212,6 +224,21 @@ export default function AdminAssignmentsPage() {
                   title="Attach annotated feedback"
                   description="Upload a marked PDF, rubric sheet, or instructor memo for the learner to download."
                   accepted="PDF or DOCX up to 10MB"
+                  accept=".pdf,.doc,.docx,.txt"
+                  generateUploadUrl={generateUploadUrl}
+                  onUploaded={async (file) => {
+                    await createAdminDocument({
+                      name: `${selected.learner.name} - ${file.fileName}`,
+                      category: 'assignment_feedback',
+                      access: 'admin_team',
+                      storageId: file.storageId as any,
+                      fileName: file.fileName,
+                      contentType: file.contentType,
+                      size: file.size,
+                    });
+                    toast({ title: 'Feedback file saved', description: `${file.fileName} was added to the admin document library.`, tone: 'success' });
+                  }}
+                  helper="Feedback files are stored in Convex document storage and cataloged in the admin library."
                 />
                 <div className="flex flex-wrap justify-end gap-3">
                   <Button variant="outline" onClick={() => handleReview('needs_revision')}>
@@ -231,5 +258,21 @@ export default function AdminAssignmentsPage() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+function SubmissionDownloadButton({ storageId, label, icon }: { storageId?: string; label: string; icon?: 'view' }) {
+  const url = useQuery(api.documents.getUrl, storageId ? { storageId: storageId as any } : 'skip') as string | null | undefined;
+  return (
+    <Button
+      variant="outline"
+      disabled={!url}
+      onClick={() => {
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }}
+    >
+      {icon === 'view' ? <Eye className="mr-2 h-4 w-4" /> : <Download className="mr-2 h-4 w-4" />}
+      {label}
+    </Button>
   );
 }

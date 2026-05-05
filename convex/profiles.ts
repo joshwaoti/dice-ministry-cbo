@@ -26,8 +26,20 @@ export const current = query({
       name: profile.name,
       role: profile.role,
       status: profile.status,
+      phone: profile.phone,
+      avatarUrl: profile.avatarUrl,
+      avatarStorageId: profile.avatarStorageId,
       portal: profile.role === 'student' ? 'student' : 'admin',
     };
+  },
+});
+
+export const avatarUrl = query({
+  args: { storageId: v.optional(v.id('_storage')) },
+  handler: async (ctx, args) => {
+    if (!args.storageId) return null;
+    await getCurrentProfile(ctx);
+    return await ctx.storage.getUrl(args.storageId);
   },
 });
 
@@ -89,11 +101,69 @@ export const completeFirstLogin = mutation({
   },
 });
 
+export const claimSignedInProfile = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError('Sign in with Clerk before claiming a DICE profile.');
+    const email = normalizeEmail(identity.email ?? '');
+    if (!email) throw new ConvexError('Your Clerk account does not have a primary email address.');
+
+    const byClerkId = await ctx.db
+      .query('profiles')
+      .withIndex('by_clerk_user_id', (q) => q.eq('clerkUserId', identity.subject))
+      .unique();
+    if (byClerkId) return byClerkId._id;
+
+    const byEmail = await ctx.db.query('profiles').withIndex('by_email', (q) => q.eq('email', email)).unique();
+    if (!byEmail) return null;
+    if (byEmail.clerkUserId && byEmail.clerkUserId !== identity.subject) {
+      throw new ConvexError('This DICE profile is already linked to a different Clerk account.');
+    }
+
+    const now = Date.now();
+    const patch: any = {
+      clerkUserId: identity.subject,
+      status: byEmail.status === 'pending_invite' ? 'active' : byEmail.status,
+      firstLoginAt: byEmail.firstLoginAt ?? now,
+      lastActiveAt: now,
+      updatedAt: now,
+    };
+    await ctx.db.patch(byEmail._id, patch);
+
+    if (byEmail.role === 'student') {
+      const student = await ctx.db
+        .query('studentProfiles')
+        .withIndex('by_profile', (q) => q.eq('profileId', byEmail._id))
+        .unique();
+      if (student && student.enrollmentStatus === 'pending_invite') {
+        await ctx.db.patch(student._id, { enrollmentStatus: 'active', updatedAt: now });
+        const job = await ctx.db
+          .query('studentInvitationJobs')
+          .withIndex('by_student_profile', (q) => q.eq('studentProfileId', student._id))
+          .first();
+        if (job) await ctx.db.patch(job._id, { status: 'accepted', updatedAt: now });
+      }
+    } else {
+      const adminProfile = await ctx.db
+        .query('adminProfiles')
+        .withIndex('by_profile', (q) => q.eq('profileId', byEmail._id))
+        .unique();
+      if (adminProfile && adminProfile.status === 'pending_invite') {
+        await ctx.db.patch(adminProfile._id, { status: 'active', updatedAt: now });
+      }
+    }
+
+    return byEmail._id;
+  },
+});
+
 export const updateSelf = mutation({
   args: {
     name: v.optional(v.string()),
     phone: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id('_storage')),
   },
   handler: async (ctx, args) => {
     const profile = await getCurrentProfile(ctx);
@@ -102,6 +172,7 @@ export const updateSelf = mutation({
       name: args.name?.trim() || profile.name,
       phone: args.phone,
       avatarUrl: args.avatarUrl,
+      avatarStorageId: args.avatarStorageId,
       updatedAt: Date.now(),
     });
     return profile._id;
@@ -147,7 +218,7 @@ export const syncFromClerkWebhook = mutation({
 
     if (profile) {
       const patch: any = { clerkUserId, email, name, updatedAt: now };
-      if (profile.role === 'student' && profile.status === 'pending_invite') patch.status = 'active';
+      if (profile.status === 'pending_invite') patch.status = 'active';
       await ctx.db.patch(profile._id, patch);
 
       if (profile.role === 'student') {
@@ -162,6 +233,14 @@ export const syncFromClerkWebhook = mutation({
             .withIndex('by_student_profile', (q) => q.eq('studentProfileId', student._id))
             .first();
           if (job) await ctx.db.patch(job._id, { status: 'accepted', updatedAt: now });
+        }
+      } else {
+        const adminProfile = await ctx.db
+          .query('adminProfiles')
+          .withIndex('by_profile', (q) => q.eq('profileId', profile._id))
+          .unique();
+        if (adminProfile && adminProfile.status === 'pending_invite') {
+          await ctx.db.patch(adminProfile._id, { status: 'active', updatedAt: now });
         }
       }
       return { ok: true, profileId: profile._id };

@@ -5,12 +5,10 @@ import { Bell, BookOpenCheck, CheckCircle2, Clock, Flame, FolderUp, MessageSquar
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/toast';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
 export default function StudentDashboard() {
-  const { toast } = useToast();
   const dashboard = useQuery(api.portal.studentDashboard) as any | undefined;
   const profile = dashboard?.profile;
   const studentProfile = dashboard?.studentProfile;
@@ -95,16 +93,16 @@ export default function StudentDashboard() {
           <section>
             <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted">Quick Actions</h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <button type="button" onClick={() => toast({ title: 'Upload panel ready', description: 'Student document submission is available from your assignments page.', tone: 'info' })} className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md">
+              <Link href="/student/assignments" className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md">
                 <div className="mb-4 inline-flex rounded-2xl bg-accent/10 p-3 text-accent"><FolderUp className="h-5 w-5" /></div>
                 <h3 className="font-display text-lg font-bold text-primary">Upload coursework</h3>
                 <p className="mt-2 text-sm text-muted-foreground">Submit PDF, DOC, DOCX, or TXT documents from your assignments page.</p>
-              </button>
-              <button type="button" onClick={() => toast({ title: 'Mentor inbox available', description: 'Open Messages to continue the conversation with your mentor or instructor.', tone: 'success' })} className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md">
+              </Link>
+              <Link href="/student/messages" className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md">
                 <div className="mb-4 inline-flex rounded-2xl bg-primary/10 p-3 text-primary"><MessageSquareText className="h-5 w-5" /></div>
                 <h3 className="font-display text-lg font-bold text-primary">Mentor communication</h3>
                 <p className="mt-2 text-sm text-muted-foreground">Direct messaging and notification surfaces are connected to your portal profile.</p>
-              </button>
+              </Link>
             </div>
           </section>
         </div>

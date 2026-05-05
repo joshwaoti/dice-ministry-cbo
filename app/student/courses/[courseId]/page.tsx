@@ -8,7 +8,6 @@ import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/portal/StatusPill';
-import { getCourseById } from '@/lib/portal-data';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 
@@ -19,7 +18,9 @@ function canQueryConvexId(id: string) {
 export default function CourseDetail({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
   const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
-  const fallbackCourse = getCourseById(courseId);
+  if (canQueryConvexId(courseId) && liveCourse === undefined) {
+    return <LoadingPortalState label="Loading course..." />;
+  }
   const course = liveCourse
     ? {
         id: liveCourse._id,
@@ -41,11 +42,14 @@ export default function CourseDetail({ params }: { params: Promise<{ courseId: s
           })),
         })),
       }
-    : fallbackCourse;
+    : null;
+
+  if (!course) {
+    return <EmptyPortalState variant="learning" title="Course not available" description="This course must be assigned from Convex before it can appear in the student portal." />;
+  }
 
   return (
     <div className="space-y-8 pb-10">
-      {canQueryConvexId(courseId) && liveCourse === undefined ? <LoadingPortalState label="Loading course..." /> : null}
       <PortalPageHeader
         eyebrow="Course Overview"
         title={course.title}

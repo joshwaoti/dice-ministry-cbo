@@ -12,6 +12,7 @@ import type * as adminUsers from "../adminUsers.js";
 import type * as announcements from "../announcements.js";
 import type * as applications from "../applications.js";
 import type * as assignments from "../assignments.js";
+import type * as cohorts from "../cohorts.js";
 import type * as courses from "../courses.js";
 import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   announcements: typeof announcements;
   applications: typeof applications;
   assignments: typeof assignments;
+  cohorts: typeof cohorts;
   courses: typeof courses;
   crons: typeof crons;
   documents: typeof documents;

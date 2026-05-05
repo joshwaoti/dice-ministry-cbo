@@ -22,6 +22,14 @@ const space = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'DICE Ministry CBO',
   description: 'Empowering Teenagers & Young Adults in Kenya',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -44,7 +45,14 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
     <>
       <div className="p-6 flex items-center justify-between md:justify-start">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">D</div>
+          <div className="relative w-8 h-8">
+            <Image
+              src="/images/Logo-1-White.png"
+              alt="DICE Ministry Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           {!collapsed ? <span className="font-display font-bold text-lg text-white">DICE Admin</span> : null}
         </div>
         <div className="flex items-center gap-2">
@@ -102,7 +110,14 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-primary z-20 px-4 flex items-center justify-between shrink-0">
          <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">D</div>
+          <div className="relative w-8 h-8">
+            <Image
+              src="/images/Logo-1-White.png"
+              alt="DICE Ministry Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           <span className="font-display font-bold text-lg text-white">DICE Admin</span>
         </div>
         <button className="text-white p-2" onClick={() => setMobileMenuOpen(true)}>
@@ -140,7 +155,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="mt-16 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:mt-0 md:p-8">
+      <main className="mt-16 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:mt-0 md:p-8">
         <div className="mx-auto max-w-7xl w-full min-w-0">
           {children}
         </div>

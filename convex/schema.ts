@@ -43,6 +43,7 @@ export default defineSchema({
     status: profileStatus,
     phone: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id('_storage')),
     firstLoginAt: v.optional(v.number()),
     lastActiveAt: v.optional(v.number()),
     createdAt: v.number(),
@@ -72,6 +73,7 @@ export default defineSchema({
     profileId: v.id('profiles'),
     applicationId: v.optional(v.id('applications')),
     studentCode: v.string(),
+    programTrack: v.optional(v.string()),
     cohortId: v.optional(v.id('cohorts')),
     enrollmentStatus: v.union(
       v.literal('pending_invite'),
@@ -124,6 +126,30 @@ export default defineSchema({
     category: v.string(),
     uploadedAt: v.number(),
   }).index('by_application', ['applicationId']),
+
+  studentDocuments: defineTable({
+    studentProfileId: v.id('studentProfiles'),
+    storageId: v.id('_storage'),
+    fileName: v.string(),
+    contentType: documentMimeType,
+    size: v.number(),
+    category: v.string(),
+    uploadedAt: v.number(),
+  }).index('by_student', ['studentProfileId']),
+
+  studentFlags: defineTable({
+    studentProfileId: v.id('studentProfiles'),
+    createdBy: v.id('profiles'),
+    severity: v.union(v.literal('low'), v.literal('medium'), v.literal('high')),
+    reason: v.string(),
+    status: v.union(v.literal('open'), v.literal('resolved')),
+    resolvedBy: v.optional(v.id('profiles')),
+    resolvedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_student', ['studentProfileId'])
+    .index('by_status', ['status']),
 
   adminDocuments: defineTable({
     name: v.string(),
@@ -254,6 +280,17 @@ export default defineSchema({
     .index('by_student_unit', ['studentProfileId', 'unitId'])
     .index('by_student_course', ['studentProfileId', 'courseId']),
 
+  studentNotes: defineTable({
+    studentProfileId: v.id('studentProfiles'),
+    courseId: v.id('courses'),
+    unitId: v.id('units'),
+    body: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_student_unit', ['studentProfileId', 'unitId'])
+    .index('by_student_course', ['studentProfileId', 'courseId']),
+
   assignments: defineTable({
     unitId: v.id('units'),
     courseId: v.id('courses'),
@@ -307,7 +344,9 @@ export default defineSchema({
     studentProfileId: v.id('studentProfiles'),
     adminProfileId: v.optional(v.id('profiles')),
     subject: v.string(),
+    status: v.optional(v.union(v.literal('open'), v.literal('resolved'))),
     lastMessageAt: v.optional(v.number()),
+    resolvedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -320,7 +359,9 @@ export default defineSchema({
     senderProfileId: v.id('profiles'),
     body: v.string(),
     readAt: v.optional(v.number()),
+    editedAt: v.optional(v.number()),
     createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
   })
     .index('by_conversation', ['conversationId'])
     .index('by_sender', ['senderProfileId']),

@@ -1,7 +1,7 @@
 'use client';
 
 import { ClipboardCheck, Download, MailQuestion, UserRoundPlus } from 'lucide-react';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useState } from 'react';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
@@ -32,6 +32,8 @@ export default function AdminApplicationsPage() {
   const liveApplications = useQuery(api.applications.list, {}) as any[] | undefined;
   const invitationJobs = useQuery(api.invitations.listJobs, {}) as any[] | undefined;
   const approveApplication = useMutation(api.applications.approve);
+  const updateApplicationStatus = useMutation(api.applications.updateStatus);
+  const processInvitations = useAction(api.invitations.processQueue);
   const invitationByApplication = new Map((invitationJobs ?? []).map((job) => [job.applicationId, job]));
   const reviewQueue: ReviewApplication[] = liveApplications?.map((application) => ({
       id: application._id,
@@ -46,20 +48,40 @@ export default function AdminApplicationsPage() {
     })) ?? [];
   const { pageItems, totalPages } = paginate(reviewQueue, page, PAGE_SIZE);
 
+  const handleExport = () => {
+    const rows = [
+      ['Name', 'School', 'Status', 'Submitted', 'Invitation'],
+      ...reviewQueue.map((application) => [
+        application.name,
+        application.school,
+        application.status,
+        application.submitted,
+        application.invitation?.status ?? 'not queued',
+      ]),
+    ];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ignite-applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleApprove = async (application: (typeof reviewQueue)[number]) => {
-    if (!application.isLive) {
-      toast({
-        title: `${application.name} admitted`,
-        description: 'Connect Convex to approve live applications and queue automatic Clerk invitations.',
-        tone: 'success',
-      });
+    const alreadyApproved = application.status === 'Approved' || application.invitation?.status === 'sent' || application.invitation?.status === 'accepted';
+    if (alreadyApproved) {
+      toast({ title: 'Already admitted', description: `${application.name} has already been approved, so another invite was not sent.`, tone: 'info' });
       return;
     }
 
     await approveApplication({ applicationId: application.id as any });
+    await processInvitations({ limit: 5 }).catch((error) => {
+      console.error('Failed to process invitation queue after approval', error);
+    });
     toast({
       title: `${application.name} approved`,
-      description: 'A Clerk invitation job was queued automatically. No Clerk dashboard step is needed.',
+      description: 'A Clerk invitation was queued and processing has started automatically. No Clerk dashboard step is needed.',
       tone: 'success',
     });
   };
@@ -70,7 +92,7 @@ export default function AdminApplicationsPage() {
         eyebrow="Admin Portal"
         title="Application Review"
         description="Review Ignite applications, request missing documents, and admit approved learners into the student roster."
-        actions={<Button variant="outline" onClick={() => toast({ title: 'Application report queued', description: 'A summary export is being prepared for the admissions team.', tone: 'info' })}><Download className="mr-2 h-4 w-4" /> Export Applications</Button>}
+        actions={<Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export Applications</Button>}
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
@@ -115,15 +137,36 @@ export default function AdminApplicationsPage() {
                   </span>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => toast({ title: 'Document request sent', description: `A follow-up request was sent to ${application.name}.`, tone: 'warning' })}>
+                  {(() => {
+                    const locked = application.status === 'Approved' || ['queued', 'sending', 'sent', 'accepted'].includes(application.invitation?.status);
+                    return (
+                      <>
+                  <Button
+                    variant="outline"
+                    disabled={locked}
+                    onClick={async () => {
+                      await updateApplicationStatus({ applicationId: application.id as any, status: 'under_review', internalNotes: 'Requested missing admissions documents.' });
+                      toast({ title: 'Document request logged', description: `${application.name} was moved to under review for missing documents.`, tone: 'warning' });
+                    }}
+                  >
                     <MailQuestion className="mr-2 h-4 w-4" /> Request Documents
                   </Button>
-                  <Button variant="outline" onClick={() => toast({ title: 'Interview checklist opened', description: 'The admissions interview guide is ready for this applicant.', tone: 'info' })}>
+                  <Button
+                    variant="outline"
+                    disabled={locked}
+                    onClick={async () => {
+                      await updateApplicationStatus({ applicationId: application.id as any, status: 'under_review', internalNotes: 'Interview checklist opened for admissions review.' });
+                      toast({ title: 'Checklist logged', description: `${application.name} is now marked under review.`, tone: 'info' });
+                    }}
+                  >
                     <ClipboardCheck className="mr-2 h-4 w-4" /> Review Checklist
                   </Button>
-                  <Button variant="primary" onClick={() => handleApprove(application)}>
+                  <Button variant="primary" disabled={locked} onClick={() => handleApprove(application)}>
                     <UserRoundPlus className="mr-2 h-4 w-4" /> Admit Applicant
                   </Button>
+                      </>
+                    );
+                  })()}
                 </div>
               </article>
             ))}

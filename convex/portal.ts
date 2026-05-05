@@ -5,7 +5,7 @@ import { requireAdmin, requireStudent } from './model';
 export const adminDashboard = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    const actor = await requireAdmin(ctx);
     const [students, courses, submissions, applications, conversations, announcements, enrollments] = await Promise.all([
       ctx.db.query('studentProfiles').collect(),
       ctx.db.query('courses').collect(),
@@ -39,6 +39,17 @@ export const adminDashboard = query({
     ]
       .sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
       .slice(0, 10);
+    const unreadMessages = (
+      await Promise.all(
+        conversations.map(async (conversation) => {
+          const messages = await ctx.db
+            .query('messages')
+            .withIndex('by_conversation', (q) => q.eq('conversationId', conversation._id))
+            .collect();
+          return messages.filter((message) => message.senderProfileId !== actor._id && !message.readAt).length;
+        }),
+      )
+    ).reduce((sum, count) => sum + count, 0);
 
     return {
       metrics: {
@@ -47,7 +58,7 @@ export const adminDashboard = query({
         draftCourses,
         pendingSubmissions,
         activeThisWeek: students.filter((student) => student.lastActiveAt && student.lastActiveAt > Date.now() - 7 * 86400000).length,
-        unreadMessages: conversations.filter((c) => c.lastMessageAt && c.lastMessageAt > Date.now() - 7 * 86400000).length,
+        unreadMessages,
         applications: applications.length,
         newApplications,
         avgCompletion,
@@ -76,12 +87,21 @@ export const studentDashboard = query({
     const courses = await Promise.all(enrollments.map(async (enrollment) => ({ ...enrollment, course: await ctx.db.get(enrollment.courseId) })));
     const submissions = await ctx.db.query('submissions').withIndex('by_student', (q) => q.eq('studentProfileId', studentProfile._id)).collect();
     const conversations = await ctx.db.query('conversations').withIndex('by_student', (q) => q.eq('studentProfileId', studentProfile._id)).collect();
+    const conversationsWithUnread = await Promise.all(
+      conversations.map(async (conversation) => {
+        const messages = await ctx.db.query('messages').withIndex('by_conversation', (q) => q.eq('conversationId', conversation._id)).collect();
+        return {
+          ...conversation,
+          unreadCount: messages.filter((message) => message.senderProfileId !== profile._id && !message.readAt).length,
+        };
+      }),
+    );
     return {
       profile,
       studentProfile,
       courses,
       submissions,
-      conversations,
+      conversations: conversationsWithUnread,
       featured: courses[0] ?? null,
       progress: studentProfile.progressPercent ?? 0,
     };

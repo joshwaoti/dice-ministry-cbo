@@ -32,16 +32,16 @@ export function PaginationControls({
       <p className="text-sm text-muted-foreground">
         Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalItems)} of {totalItems}
       </p>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(Math.max(1, page - 1))}>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <Button className="w-full sm:w-auto" size="sm" variant="outline" disabled={page === 1} onClick={() => onPageChange(Math.max(1, page - 1))}>
           Previous
         </Button>
         {Array.from({ length: totalPages }, (_, index) => index + 1).map((entry) => (
-          <Button key={entry} size="sm" variant={entry === page ? 'primary' : 'outline'} onClick={() => onPageChange(entry)}>
+          <Button key={entry} className="hidden sm:inline-flex" size="sm" variant={entry === page ? 'primary' : 'outline'} onClick={() => onPageChange(entry)}>
             {entry}
           </Button>
         ))}
-        <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(Math.min(totalPages, page + 1))}>
+        <Button className="w-full sm:w-auto" size="sm" variant="outline" disabled={page === totalPages} onClick={() => onPageChange(Math.min(totalPages, page + 1))}>
           Next
         </Button>
       </div>

@@ -3,6 +3,14 @@ import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { assertDocumentContentType, requireAdmin, requireProfile, requireStudent } from './model';
 
+export const getUrl = query({
+  args: { storageId: v.id('_storage') },
+  handler: async (ctx, args) => {
+    await requireProfile(ctx);
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 export const listAdminLibrary = query({
   args: {},
   handler: async (ctx) => {
@@ -92,6 +100,53 @@ export const attachApplicationDocument = mutation({
     assertDocumentContentType(args.contentType);
     return await ctx.db.insert('applicationDocuments', {
       applicationId: args.applicationId,
+      storageId: args.storageId,
+      fileName: args.fileName,
+      contentType: args.contentType as any,
+      size: args.size,
+      category: args.category,
+      uploadedAt: Date.now(),
+    });
+  },
+});
+
+export const attachStudentDocument = mutation({
+  args: {
+    storageId: v.id('_storage'),
+    fileName: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    category: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { studentProfile } = await requireStudent(ctx);
+    assertDocumentContentType(args.contentType);
+    return await ctx.db.insert('studentDocuments', {
+      studentProfileId: studentProfile._id,
+      storageId: args.storageId,
+      fileName: args.fileName,
+      contentType: args.contentType as any,
+      size: args.size,
+      category: args.category,
+      uploadedAt: Date.now(),
+    });
+  },
+});
+
+export const attachStudentDocumentForAdmin = mutation({
+  args: {
+    studentProfileId: v.id('studentProfiles'),
+    storageId: v.id('_storage'),
+    fileName: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    category: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    assertDocumentContentType(args.contentType);
+    return await ctx.db.insert('studentDocuments', {
+      studentProfileId: args.studentProfileId,
       storageId: args.storageId,
       fileName: args.fileName,
       contentType: args.contentType as any,

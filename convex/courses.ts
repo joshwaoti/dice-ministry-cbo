@@ -150,6 +150,19 @@ export const createModule = mutation({
   },
 });
 
+export const updateModule = mutation({
+  args: { moduleId: v.id('modules'), title: v.string(), description: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot edit coursework.');
+    await ctx.db.patch(args.moduleId, {
+      title: args.title,
+      description: args.description,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const getAdminCourse = query({
   args: { courseId: v.id('courses') },
   handler: async (ctx, args) => {
@@ -204,6 +217,34 @@ export const saveUnit = mutation({
       status: 'draft',
       createdAt: now,
       updatedAt: now,
+    });
+  },
+});
+
+export const addUnitResource = mutation({
+  args: {
+    unitId: v.id('units'),
+    storageId: v.id('_storage'),
+    fileName: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    resourceType: v.union(v.literal('inline_pdf'), v.literal('download'), v.literal('image')),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot edit coursework.');
+    if (args.contentType.startsWith('video/') || args.contentType.startsWith('audio/')) {
+      throw new ConvexError('Course resources must be document or image files. Video and audio are not supported.');
+    }
+    return await ctx.db.insert('unitResources', {
+      unitId: args.unitId,
+      storageId: args.storageId,
+      fileName: args.fileName,
+      contentType: args.contentType as any,
+      size: args.size,
+      resourceType: args.resourceType,
+      uploadedBy: actor._id,
+      uploadedAt: Date.now(),
     });
   },
 });
@@ -322,5 +363,40 @@ export const markUnitComplete = mutation({
     await ctx.db.patch(enrollment._id, { progressPercent, updatedAt: now });
     await ctx.db.patch(studentProfile._id, { progressPercent, lastActiveAt: now, updatedAt: now });
     return progressPercent;
+  },
+});
+
+export const getUnitNote = query({
+  args: { courseId: v.id('courses'), unitId: v.id('units') },
+  handler: async (ctx, args) => {
+    const { studentProfile } = await requireStudent(ctx);
+    return await ctx.db
+      .query('studentNotes')
+      .withIndex('by_student_unit', (q) => q.eq('studentProfileId', studentProfile._id).eq('unitId', args.unitId))
+      .unique();
+  },
+});
+
+export const saveUnitNote = mutation({
+  args: { courseId: v.id('courses'), unitId: v.id('units'), body: v.string() },
+  handler: async (ctx, args) => {
+    const { studentProfile } = await requireStudent(ctx);
+    const now = Date.now();
+    const existing = await ctx.db
+      .query('studentNotes')
+      .withIndex('by_student_unit', (q) => q.eq('studentProfileId', studentProfile._id).eq('unitId', args.unitId))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { body: args.body, updatedAt: now });
+      return existing._id;
+    }
+    return await ctx.db.insert('studentNotes', {
+      studentProfileId: studentProfile._id,
+      courseId: args.courseId,
+      unitId: args.unitId,
+      body: args.body,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });

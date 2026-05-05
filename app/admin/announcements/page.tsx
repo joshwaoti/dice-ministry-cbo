@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { CalendarClock, Megaphone, Send, Sparkles } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { announcements } from '@/lib/portal-data';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -24,6 +23,7 @@ export default function AdminAnnouncementsPage() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [audience, setAudience] = useState<'all' | 'students' | 'admins' | 'cohort'>('students');
+  const [scheduledAt, setScheduledAt] = useState('');
   const { toast } = useToast();
   const liveAnnouncements = useQuery(api.announcements.listAdmin) as any[] | undefined;
   const createAnnouncement = useMutation(api.announcements.create);
@@ -38,7 +38,7 @@ export default function AdminAnnouncementsPage() {
       status: announcement.status === 'sent' ? 'Sent' : announcement.status === 'scheduled' ? 'Scheduled' : 'Draft',
       date: announcement.sentAt ? new Date(announcement.sentAt).toLocaleString() : announcement.scheduledAt ? new Date(announcement.scheduledAt).toLocaleString() : 'Unscheduled',
       isLive: true,
-    })) ?? announcements.map((announcement) => ({ ...announcement, isLive: false }));
+    })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedAnnouncements, page, PAGE_SIZE);
 
   const handleCreate = async () => {
@@ -46,11 +46,12 @@ export default function AdminAnnouncementsPage() {
       toast({ title: 'Title and body required', description: 'Announcements need both a title and message body.', tone: 'warning' });
       return;
     }
-    await createAnnouncement({ title, body, audience });
-    toast({ title: 'Announcement published', description: 'The message is now available to the selected audience.', tone: 'success' });
+    await createAnnouncement({ title, body, audience, scheduledAt: scheduledAt ? new Date(scheduledAt).getTime() : undefined });
+    toast({ title: scheduledAt ? 'Announcement scheduled' : 'Announcement published', description: 'The message is saved for the selected audience.', tone: 'success' });
     setTitle('');
     setBody('');
     setAudience('students');
+    setScheduledAt('');
     setOpen(false);
   };
 
@@ -105,8 +106,24 @@ export default function AdminAnnouncementsPage() {
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => toast({ title: 'Announcement duplicated', description: 'A copy has been opened in the composer as a new draft.', tone: 'success' })}>Duplicate</Button>
-                <Button variant="outline" onClick={() => toast({ title: 'Audience updated', description: 'Segment targeting controls are ready for review.', tone: 'info' })}>Edit Audience</Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await createAnnouncement({ title: `${announcement.title} Copy`, body: 'Duplicated announcement body. Edit before sending.', audience: announcement.audience as any, scheduledAt: Date.now() + 24 * 60 * 60 * 1000 });
+                    toast({ title: 'Announcement duplicated', description: 'A scheduled copy has been created for editing.', tone: 'success' });
+                  }}
+                >
+                  Duplicate
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await updateAnnouncement({ announcementId: announcement.id as any, audience: announcement.audience === 'students' ? 'admins' : 'students', status: 'draft' });
+                    toast({ title: 'Audience updated', description: 'Audience was toggled and the announcement returned to draft.', tone: 'info' });
+                  }}
+                >
+                  Edit Audience
+                </Button>
                 <Button
                   variant="primary"
                   onClick={async () => {
@@ -159,7 +176,6 @@ export default function AdminAnnouncementsPage() {
           <Input placeholder="Announcement title" value={title} onChange={(event) => setTitle(event.target.value)} />
           <div className="grid gap-4 md:grid-cols-3">
             <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent" value={audience} onChange={(event) => setAudience(event.target.value as any)}>
-              <option>Audience</option>
               <option value="all">Public visitors</option>
               <option value="students">Students</option>
               <option value="admins">All admins</option>
@@ -172,7 +188,7 @@ export default function AdminAnnouncementsPage() {
               <option>Portal notification</option>
               <option>All selected channels</option>
             </select>
-            <Input type="datetime-local" />
+            <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
           </div>
           <Textarea className="min-h-36" placeholder="Message body, CTA copy, follow-up instructions, or mentor note." value={body} onChange={(event) => setBody(event.target.value)} />
           <div className="rounded-2xl border border-border bg-surface p-4 text-sm text-muted-foreground">

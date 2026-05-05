@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { PortalDialog } from '@/components/portal/PortalDialog';
@@ -24,33 +24,64 @@ export default function AdminUsersPage() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'moderator' | 'super_admin'>('moderator');
   const [scope, setScope] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [editRole, setEditRole] = useState<'admin' | 'moderator' | 'super_admin'>('moderator');
+  const [editScope, setEditScope] = useState('');
   const { toast } = useToast();
+  const currentProfile = useQuery(api.profiles.current);
   const liveUsers = useQuery(api.adminUsers.list) as any[] | undefined;
-  const inviteAdmin = useMutation(api.adminUsers.inviteAdmin);
+  const inviteAdmin = useAction(api.adminUsers.inviteAdmin);
+  const resendAdminInvite = useAction(api.adminUsers.resendAdminInvite);
   const updateStatus = useMutation(api.adminUsers.updateStatus);
+  const updateRole = useMutation(api.adminUsers.updateRole);
   const normalizedUsers = liveUsers?.map((user) => ({
       id: user._id,
       name: user.name,
       email: user.email,
+      rawRole: user.role,
       role: user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'Admin / Teacher' : 'Moderator',
       scope: 'Portal access',
       status: user.status === 'active' ? 'Active' : user.status === 'suspended' ? 'Suspended' : 'Pending Invite',
+      rawStatus: user.status,
       isLive: true,
     })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedUsers, page, PAGE_SIZE);
+  const canInviteAllRoles = currentProfile?.role === 'super_admin';
+  const roleOptions = canInviteAllRoles
+    ? [
+        { value: 'super_admin', label: 'Super Admin' },
+        { value: 'admin', label: 'Admin / Teacher' },
+        { value: 'moderator', label: 'Moderator' },
+      ]
+    : [{ value: 'moderator', label: 'Moderator' }];
 
   const handleInvite = async () => {
     if (!name.trim() || !email.trim()) {
       toast({ title: 'Name and email required', description: 'Add the admin name and email before inviting.', tone: 'warning' });
       return;
     }
-    await inviteAdmin({ name, email, role, scope });
-    toast({ title: 'Admin profile created', description: 'The user is pending invite/activation in the admin directory.', tone: 'success' });
+    await inviteAdmin({ name, email, role: canInviteAllRoles ? role : 'moderator', scope });
+    toast({ title: 'Admin invitation sent', description: 'Clerk has emailed the invite and the pending admin profile was created in Convex.', tone: 'success' });
     setName('');
     setEmail('');
     setScope('');
     setRole('moderator');
     setOpen(false);
+  };
+
+  const openRoleEditor = (user: any) => {
+    setSelectedUser(user);
+    setEditRole(user.rawRole);
+    setEditScope(user.scope);
+    setEditOpen(true);
+  };
+
+  const handleRoleSave = async () => {
+    if (!selectedUser) return;
+    await updateRole({ profileId: selectedUser.id as any, role: canInviteAllRoles ? editRole : 'moderator', scope: editScope });
+    toast({ title: 'Role updated', description: `${selectedUser.name}'s admin permissions were saved.`, tone: 'success' });
+    setEditOpen(false);
   };
 
   return (
@@ -97,11 +128,21 @@ export default function AdminUsersPage() {
                     <p className="mt-2 text-sm text-muted-foreground">{user.scope}</p>
                   </div>
                 </div>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => toast({ title: `${user.name} edited`, description: 'Role permissions are ready for adjustment.', tone: 'info' })}>Edit Role</Button>
-                  <Button variant="outline" onClick={() => toast({ title: `${user.name} invited again`, description: 'A fresh invitation email was sent with portal access instructions.', tone: 'success' })}>Resend Invite</Button>
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <Button variant="outline" onClick={() => openRoleEditor(user)} disabled={user.rawRole === 'super_admin' && !canInviteAllRoles}>Edit Role</Button>
                   <Button
                     variant="outline"
+                    disabled={user.rawStatus === 'active' || user.rawStatus === 'suspended'}
+                    onClick={async () => {
+                      if (user.isLive) await resendAdminInvite({ profileId: user.id as any });
+                      toast({ title: `${user.name} invited again`, description: 'A fresh Clerk invitation email was sent with portal access instructions.', tone: 'success' });
+                    }}
+                  >
+                    Resend Invite
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={user.rawStatus === 'suspended'}
                     onClick={async () => {
                       if (user.isLive) await updateStatus({ profileId: user.id as any, status: 'suspended' });
                       toast({ title: `${user.name} deactivated`, description: 'Access was suspended pending approval.', tone: 'warning' });
@@ -126,9 +167,9 @@ export default function AdminUsersPage() {
               </div>
             </div>
             <div className="mt-5 space-y-3 text-sm text-muted-foreground">
-              <div className="rounded-2xl border border-border px-4 py-3">Super Admins: full portal control, publishing, and user management.</div>
-              <div className="rounded-2xl border border-border px-4 py-3">Instructors: assignments, course documents, learner messaging.</div>
-              <div className="rounded-2xl border border-border px-4 py-3">Admissions Officers: applications, student creation, and intake documents.</div>
+              <div className="rounded-2xl border border-border px-4 py-3">Super Admins: full portal control, publishing, and all user invitations.</div>
+              <div className="rounded-2xl border border-border px-4 py-3">Admins / Teachers: applications, students, coursework, and moderator invitations.</div>
+              <div className="rounded-2xl border border-border px-4 py-3">Moderators: coursework support, grading, and learner messaging.</div>
             </div>
           </div>
           <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
@@ -155,10 +196,10 @@ export default function AdminUsersPage() {
             <Input type="email" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent" value={role} onChange={(event) => setRole(event.target.value as any)}>
-              <option value="super_admin">Super Admin</option>
-              <option value="admin">Admin / Teacher</option>
-              <option value="moderator">Moderator</option>
+            <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent" value={canInviteAllRoles ? role : 'moderator'} onChange={(event) => setRole(event.target.value as any)} disabled={!canInviteAllRoles}>
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
             <Input placeholder="Scope or team (e.g. Ignite 2025)" value={scope} onChange={(event) => setScope(event.target.value)} />
           </div>
@@ -166,6 +207,27 @@ export default function AdminUsersPage() {
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary" onClick={handleInvite}>Send Invite</Button>
+          </div>
+        </div>
+      </PortalDialog>
+
+      <PortalDialog open={editOpen} onClose={() => setEditOpen(false)} title="Edit Admin Role" description="Update the role and scope for this admin user.">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border bg-surface p-4 text-sm text-muted-foreground">
+            <p className="font-semibold text-primary">{selectedUser?.name}</p>
+            <p>{selectedUser?.email}</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent" value={canInviteAllRoles ? editRole : 'moderator'} onChange={(event) => setEditRole(event.target.value as any)} disabled={!canInviteAllRoles}>
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <Input placeholder="Scope or team" value={editScope} onChange={(event) => setEditScope(event.target.value)} />
+          </div>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleRoleSave}>Save Role</Button>
           </div>
         </div>
       </PortalDialog>
