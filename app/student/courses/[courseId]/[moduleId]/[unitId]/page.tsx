@@ -92,9 +92,17 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
         <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-full">
           <div className="max-w-3xl mx-auto w-full">
             <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-6 text-wrap break-words leading-tight">{activeUnit.title}</h1>
-            <p className="text-base md:text-lg text-muted mb-8 leading-relaxed text-wrap break-words">
-              {activeUnit.richText ?? 'This learning screen supports primary teaching content, notes, progression controls, and a stable outline.'}
-            </p>
+
+            {activeUnit.richText ? (
+              <div
+                className="rich-text-content mb-8 max-w-none"
+                dangerouslySetInnerHTML={{ __html: activeUnit.richText }}
+              />
+            ) : (
+              <p className="text-base md:text-lg text-muted mb-8 leading-relaxed text-wrap break-words">
+                This learning screen supports primary teaching content, notes, progression controls, and a stable outline.
+              </p>
+            )}
 
             <div className="rounded-xl border border-border bg-surface p-6 mb-8 shadow-inner">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-accent">{activeUnit.type}</p>

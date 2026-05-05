@@ -12,11 +12,35 @@ export const getUrl = query({
 });
 
 export const listAdminLibrary = query({
+  args: { category: v.optional(v.string()), sourcePath: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    let docs;
+    if (args.sourcePath) {
+      docs = await ctx.db.query('adminDocuments').withIndex('by_source_path', (q) => q.eq('sourcePath', args.sourcePath)).collect();
+    } else if (args.category) {
+      docs = await ctx.db.query('adminDocuments').withIndex('by_category', (q) => q.eq('category', args.category)).collect();
+    } else {
+      docs = await ctx.db.query('adminDocuments').order('desc').collect();
+    }
+    return await Promise.all(docs.map(async (doc) => ({ ...doc, owner: doc.ownerProfileId ? await ctx.db.get(doc.ownerProfileId) : null })));
+  },
+});
+
+export const listDocumentFolders = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const docs = await ctx.db.query('adminDocuments').order('desc').collect();
-    return await Promise.all(docs.map(async (doc) => ({ ...doc, owner: doc.ownerProfileId ? await ctx.db.get(doc.ownerProfileId) : null })));
+    const folderMap = new Map();
+    for (const doc of docs) {
+      const folder = doc.sourcePath || doc.category;
+      if (!folderMap.has(folder)) {
+        folderMap.set(folder, { name: folder, count: 0, sourcePath: doc.sourcePath || null });
+      }
+      folderMap.get(folder).count++;
+    }
+    return Array.from(folderMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   },
 });
 
@@ -29,6 +53,7 @@ export const createAdminDocument = mutation({
     fileName: v.optional(v.string()),
     contentType: v.optional(v.string()),
     size: v.optional(v.number()),
+    sourcePath: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx);

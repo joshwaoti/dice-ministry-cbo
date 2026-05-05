@@ -160,13 +160,15 @@ export default defineSchema({
     fileName: v.optional(v.string()),
     contentType: v.optional(documentMimeType),
     size: v.optional(v.number()),
+    sourcePath: v.optional(v.string()),
     createdBy: v.id('profiles'),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index('by_category', ['category'])
     .index('by_access', ['access'])
-    .index('by_created', ['createdAt']),
+    .index('by_created', ['createdAt'])
+    .index('by_source_path', ['sourcePath']),
 
   studentInvitationJobs: defineTable({
     applicationId: v.id('applications'),

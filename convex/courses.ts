@@ -27,6 +27,121 @@ export const listAdmin = query({
   },
 });
 
+export const deleteCourse = mutation({
+  args: { courseId: v.id('courses') },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx, ['super_admin', 'admin']);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot delete courses.');
+    const modules = await ctx.db.query('modules').withIndex('by_course_order', (q) => q.eq('courseId', args.courseId)).collect();
+    for (const mod of modules) {
+      const units = await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', mod._id)).collect();
+      for (const unit of units) {
+        const resources = await ctx.db.query('unitResources').withIndex('by_unit', (q) => q.eq('unitId', unit._id)).collect();
+        for (const res of resources) {
+          await ctx.db.delete(res._id);
+        }
+        const assignments = await ctx.db.query('assignments').withIndex('by_unit', (q) => q.eq('unitId', unit._id)).collect();
+        for (const a of assignments) {
+          await ctx.db.delete(a._id);
+        }
+        await ctx.db.delete(unit._id);
+      }
+      await ctx.db.delete(mod._id);
+    }
+    const enrollments = await ctx.db.query('enrollments').withIndex('by_course', (q) => q.eq('courseId', args.courseId)).collect();
+    for (const e of enrollments) {
+      await ctx.db.delete(e._id);
+    }
+    await ctx.db.delete(args.courseId);
+    await writeAudit(ctx, { actorProfileId: actor._id, action: 'courses.delete', targetTable: 'courses', targetId: args.courseId, summary: 'Deleted course and all related data.' });
+  },
+});
+
+export const deleteModule = mutation({
+  args: { moduleId: v.id('modules') },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot delete modules.');
+    const mod = await ctx.db.get(args.moduleId);
+    if (!mod) throw new ConvexError('Module not found.');
+    const units = await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', args.moduleId)).collect();
+    for (const unit of units) {
+      const resources = await ctx.db.query('unitResources').withIndex('by_unit', (q) => q.eq('unitId', unit._id)).collect();
+      for (const res of resources) {
+        await ctx.db.delete(res._id);
+      }
+      await ctx.db.delete(unit._id);
+    }
+    await ctx.db.delete(args.moduleId);
+    await writeAudit(ctx, { actorProfileId: actor._id, action: 'modules.delete', targetTable: 'modules', targetId: args.moduleId, summary: `Deleted module "${mod.title}".` });
+  },
+});
+
+export const deleteUnit = mutation({
+  args: { unitId: v.id('units') },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot delete units.');
+    const unit = await ctx.db.get(args.unitId);
+    if (!unit) throw new ConvexError('Unit not found.');
+    const resources = await ctx.db.query('unitResources').withIndex('by_unit', (q) => q.eq('unitId', args.unitId)).collect();
+    for (const res of resources) {
+      await ctx.db.delete(res._id);
+    }
+    const assignments = await ctx.db.query('assignments').withIndex('by_unit', (q) => q.eq('unitId', args.unitId)).collect();
+    for (const a of assignments) {
+      await ctx.db.delete(a._id);
+    }
+    await ctx.db.delete(args.unitId);
+    await writeAudit(ctx, { actorProfileId: actor._id, action: 'units.delete', targetTable: 'units', targetId: args.unitId, summary: `Deleted unit "${unit.title}".` });
+  },
+});
+
+export const searchCourses = query({
+  args: { query: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const q = args.query.toLowerCase().trim();
+    if (!q) return [];
+    const courses = await ctx.db.query('courses').collect();
+    const results = courses.filter((c) =>
+      c.title.toLowerCase().includes(q) ||
+      c.slug.toLowerCase().includes(q) ||
+      c.synopsis.toLowerCase().includes(q),
+    );
+    return await Promise.all(
+      results.map(async (course) => {
+        const modules = await ctx.db.query('modules').withIndex('by_course_order', (q) => q.eq('courseId', course._id)).collect();
+        const units = await ctx.db.query('units').withIndex('by_course', (q) => q.eq('courseId', course._id)).collect();
+        const enrollments = await ctx.db.query('enrollments').withIndex('by_course', (q) => q.eq('courseId', course._id)).collect();
+        return { ...course, moduleCount: modules.length, unitCount: units.length, studentCount: enrollments.length };
+      }),
+    );
+  },
+});
+
+export const reorderModules = mutation({
+  args: { moduleId: v.id('modules'), newOrder: v.number() },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot reorder modules.');
+    const mod = await ctx.db.get(args.moduleId);
+    if (!mod) throw new ConvexError('Module not found.');
+    await ctx.db.patch(args.moduleId, { order: args.newOrder, updatedAt: Date.now() });
+  },
+});
+
+export const reorderUnits = mutation({
+  args: { unitId: v.id('units'), newOrder: v.number() },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot reorder units.');
+    const unit = await ctx.db.get(args.unitId);
+    if (!unit) throw new ConvexError('Unit not found.');
+    await ctx.db.patch(args.unitId, { order: args.newOrder, updatedAt: Date.now() });
+  },
+});
+
 export const listPublished = query({
   args: {},
   handler: async (ctx) => {
@@ -177,6 +292,56 @@ export const getAdminCourse = query({
       })),
     );
     return { ...course, modules: modulesWithUnits };
+  },
+});
+
+export const getUnitResources = query({
+  args: { unitId: v.id('units') },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query('unitResources').withIndex('by_unit', (q) => q.eq('unitId', args.unitId)).collect();
+  },
+});
+
+export const createCourseWithDocuments = mutation({
+  args: {
+    title: v.string(),
+    synopsis: v.string(),
+    storageIds: v.array(v.id('_storage')),
+    fileNames: v.array(v.string()),
+    contentTypes: v.array(v.string()),
+    sizes: v.array(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    if (!canEditCoursework(actor)) throw new ConvexError('You cannot create courses.');
+    const now = Date.now();
+    const courseId = await ctx.db.insert('courses', {
+      title: args.title,
+      slug: slugify(args.title),
+      synopsis: args.synopsis,
+      status: 'draft',
+      createdBy: actor._id,
+      updatedBy: actor._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+    for (let i = 0; i < args.storageIds.length; i++) {
+      await ctx.db.insert('adminDocuments', {
+        name: args.fileNames[i],
+        category: `Course: ${args.title}`,
+        access: 'instructors',
+        storageId: args.storageIds[i],
+        fileName: args.fileNames[i],
+        contentType: args.contentTypes[i] as any,
+        size: args.sizes[i],
+        createdBy: actor._id,
+        ownerProfileId: actor._id,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    return courseId;
   },
 });
 
