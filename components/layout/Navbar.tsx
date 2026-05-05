@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ChevronDown, HeartHandshake, GraduationCap, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,11 +13,13 @@ import { cn } from '@/lib/utils';
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
   const isHome = pathname === '/';
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 80);
     };
@@ -67,7 +70,7 @@ export function Navbar() {
             <span className={cn('font-display font-bold text-xl tracking-tight transition-colors', 
               transparentMode ? 'text-white' : 'text-primary'
             )}>
-              DICE Ministry
+              DICE Ministry CBO
             </span>
           </Link>
 
@@ -126,76 +129,83 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[100] bg-white md:hidden overflow-y-auto"
-          >
-            <div className="flex flex-col min-h-screen p-6">
-              <div className="flex justify-between items-center mb-8">
-                <span className="font-display font-bold text-xl text-primary">Menu</span>
-                <button onClick={() => setMobileMenuOpen(false)} className="p-2 -mr-2 bg-gray-100 rounded-full text-primary">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="flex flex-col gap-6">
-                {links.map((link) => (
-                  <div key={link.name} className="flex flex-col gap-3">
-                    <Link
-                      href={link.href}
-                      className="text-2xl font-display font-bold text-primary hover:text-accent transition-colors block border-b border-gray-100 pb-2"
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed inset-0 z-[999] overflow-y-auto bg-white md:hidden"
+              >
+                <div className="flex min-h-dvh flex-col p-6">
+                  <div className="mb-8 flex items-center justify-between">
+                    <span className="font-display text-xl font-bold text-primary">Menu</span>
+                    <button
                       onClick={() => setMobileMenuOpen(false)}
+                      className="rounded-full bg-gray-100 p-2 text-primary"
+                      aria-label="Close navigation menu"
                     >
-                      {link.name}
-                    </Link>
-                    {link.subLinks && (
-                      <div className="flex flex-col gap-3 pl-4 border-l-2 border-accent/20">
-                        {link.subLinks.map(sub => (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            className="text-lg font-medium text-gray-600 hover:text-accent transition-colors"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
+                      <X className="h-6 w-6" />
+                    </button>
                   </div>
-                ))}
-              </div>
-              <div className="mt-8 grid grid-cols-3 gap-3 rounded-2xl bg-surface p-4">
-                <Link href="/course-library" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
-                  <GraduationCap className="h-5 w-5" />
-                  Course Library
-                </Link>
-                <Link href="/team" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
-                  <Users className="h-5 w-5" />
-                  Our Team
-                </Link>
-                <Link href="/support" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
-                  <HeartHandshake className="h-5 w-5" />
-                  Support
-                </Link>
-              </div>
-              <div className="mt-auto pt-8 flex flex-col gap-4">
-                <Button variant="outline" size="lg" className="w-full" asChild onClick={() => setMobileMenuOpen(false)}>
-                  <Link href="/login">Student Login</Link>
-                </Button>
-                <Button variant="primary" size="lg" className="w-full bg-accent hover:bg-accent/90" asChild onClick={() => setMobileMenuOpen(false)}>
-                  <Link href="/support">Donate</Link>
-                </Button>
-              </div>
-            </div>
-          </motion.div>
+                  <div className="flex flex-col gap-6">
+                    {links.map((link) => (
+                      <div key={link.name} className="flex flex-col gap-3">
+                        <Link
+                          href={link.href}
+                          className="block border-b border-gray-100 pb-2 font-display text-2xl font-bold text-primary transition-colors hover:text-accent"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {link.name}
+                        </Link>
+                        {link.subLinks && (
+                          <div className="flex flex-col gap-3 border-l-2 border-accent/20 pl-4">
+                            {link.subLinks.map((sub) => (
+                              <Link
+                                key={sub.name}
+                                href={sub.href}
+                                className="text-lg font-medium text-gray-600 transition-colors hover:text-accent"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                {sub.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-8 grid grid-cols-3 gap-3 rounded-2xl bg-surface p-4">
+                    <Link href="/course-library" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
+                      <GraduationCap className="h-5 w-5" />
+                      Course Library
+                    </Link>
+                    <Link href="/team" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
+                      <Users className="h-5 w-5" />
+                      Our Team
+                    </Link>
+                    <Link href="/support" className="flex flex-col items-center gap-2 rounded-2xl bg-white px-3 py-4 text-center text-sm font-medium text-primary transition hover:border-accent hover:text-accent" onClick={() => setMobileMenuOpen(false)}>
+                      <HeartHandshake className="h-5 w-5" />
+                      Support
+                    </Link>
+                  </div>
+                  <div className="mt-auto flex flex-col gap-4 pt-8">
+                    <Button variant="outline" size="lg" className="w-full" asChild>
+                      <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Student Login</Link>
+                    </Button>
+                    <Button variant="primary" size="lg" className="w-full bg-accent hover:bg-accent/90" asChild>
+                      <Link href="/support" onClick={() => setMobileMenuOpen(false)}>Donate</Link>
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
         )}
-      </AnimatePresence>
     </header>
   );
 }

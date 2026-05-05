@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
@@ -26,33 +26,30 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-primary">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0"
-        >
+    <section className="relative min-h-screen overflow-hidden bg-[#111111]">
+      <div className="absolute inset-0">
+        {heroSlides.map((slide, index) => (
           <Image
-            src={heroSlides[currentIndex].src}
-            alt={heroSlides[currentIndex].alt}
+            key={slide.src}
+            src={slide.src}
+            alt={slide.alt}
             fill
-            priority
-            className="object-cover object-center"
+            priority={index === 0}
+            className={`object-cover object-center transition-opacity duration-[1800ms] ease-in-out ${
+              index === currentIndex ? 'opacity-100' : 'opacity-0'
+            }`}
             sizes="100vw"
           />
-        </motion.div>
-      </AnimatePresence>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,25,49,0.94)_0%,rgba(10,25,49,0.88)_38%,rgba(10,25,49,0.45)_62%,rgba(10,25,49,0.08)_100%)]" />
+        ))}
+      </div>
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,17,17,0.9)_0%,rgba(17,17,17,0.76)_38%,rgba(17,17,17,0.38)_68%,rgba(17,17,17,0.12)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_45%,rgba(246,172,85,0.18),transparent_34%)]" />
       <div
-        className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        className="absolute inset-0 opacity-[0.025] pointer-events-none"
         style={{
           backgroundImage:
             'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
+          backgroundSize: '64px 64px',
         }}
       />
 
@@ -82,7 +79,7 @@ export function HeroSection() {
             transition={{ duration: 0.55, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="mt-6 max-w-2xl text-lg leading-relaxed text-white/88 md:text-xl"
           >
-            A faith-based organization dedicated to helping young people maximize their God-given potential through spiritual principles.
+            Walking with young people as they grow in faith, purpose, leadership, and community.
           </motion.p>
           
           <motion.div 
