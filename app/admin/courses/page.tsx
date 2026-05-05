@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BookOpenCheck, Layers3, PencilLine, PlusCircle, Sparkles, Upload } from 'lucide-react';
-import { courses } from '@/lib/portal-data';
+import { BookOpenCheck, Layers3, PencilLine, PlusCircle, Sparkles, Upload, Search, Trash2 } from 'lucide-react';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
@@ -13,10 +14,79 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+
+const PAGE_SIZE = 6;
 
 export default function AdminCoursesPage() {
   const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [title, setTitle] = useState('');
+  const [synopsis, setSynopsis] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ storageId: string; fileName: string; contentType: string; size: number }>>([]);
   const { toast } = useToast();
+  const liveCourses = useQuery(api.courses.listAdmin) as any[] | undefined;
+  const searchResults = useQuery(api.courses.searchCourses, searchQuery.length >= 2 ? { query: searchQuery } : 'skip') as any[] | undefined;
+  const createCourse = useMutation(api.courses.create);
+  const createCourseWithFiles = useMutation(api.courses.createCourseWithDocuments);
+  const duplicateCourse = useMutation(api.courses.duplicate);
+  const deleteCourse = useMutation(api.courses.deleteCourse);
+  const archiveCourse = useMutation(api.courses.archive);
+  const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
+  const createAdminDocument = useMutation(api.documents.createAdminDocument);
+
+  const displayCourses = searchQuery.length >= 2 && searchResults !== undefined
+    ? searchResults.map((course: any) => ({
+        id: course._id,
+        title: course.title,
+        status: course.status === 'published' ? 'Published' : course.status === 'archived' ? 'Archived' : 'Draft',
+        modules: course.moduleCount ?? 0,
+        units: course.unitCount ?? 0,
+        type: course.synopsis || 'Text + documents',
+        students: course.studentCount ?? 0,
+        updated: new Date(course.updatedAt).toLocaleDateString(),
+        isLive: true,
+      }))
+    : liveCourses?.map((course: any) => ({
+        id: course._id,
+        title: course.title,
+        status: course.status === 'published' ? 'Published' : course.status === 'archived' ? 'Archived' : 'Draft',
+        modules: course.moduleCount ?? 0,
+        units: course.unitCount ?? 0,
+        type: course.synopsis || 'Text + documents',
+        students: course.studentCount ?? 0,
+        updated: new Date(course.updatedAt).toLocaleDateString(),
+        isLive: true,
+      })) ?? [];
+
+  const { pageItems, totalPages } = paginate(displayCourses, page, PAGE_SIZE);
+
+  const handleCreate = async () => {
+    if (!title.trim()) {
+      toast({ title: 'Course title required', description: 'Add a course title before creating the draft.', tone: 'warning' });
+      return;
+    }
+    if (uploadedFiles.length > 0) {
+      await createCourseWithFiles({
+        title,
+        synopsis: synopsis || 'Course overview pending.',
+        storageIds: uploadedFiles.map((f) => f.storageId) as any,
+        fileNames: uploadedFiles.map((f) => f.fileName),
+        contentTypes: uploadedFiles.map((f) => f.contentType),
+        sizes: uploadedFiles.map((f) => f.size),
+      });
+      toast({ title: 'Course created with files', description: `${uploadedFiles.length} file(s) attached to the course document library.`, tone: 'success' });
+    } else {
+      await createCourse({ title, synopsis: synopsis || 'Course overview pending.' });
+      toast({ title: 'Draft course created', description: 'The team can now add modules, units, and publishing rules.', tone: 'success' });
+    }
+    setTitle('');
+    setSynopsis('');
+    setUploadedFiles([]);
+    setOpen(false);
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -26,9 +96,6 @@ export default function AdminCoursesPage() {
         description="Create structured courses, manage modules and units, and keep publishing quality aligned with the PRD."
         actions={
           <>
-            <Button variant="outline" onClick={() => toast({ title: 'Outline import ready', description: 'Drop a DOCX or PDF teaching outline to scaffold a draft course.', tone: 'info' })}>
-              <Upload className="mr-2 h-4 w-4" /> Import Outline
-            </Button>
             <Button variant="primary" onClick={() => setOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" /> Create Course
             </Button>
@@ -36,9 +103,38 @@ export default function AdminCoursesPage() {
         }
       />
 
+      <div className="rounded-3xl border border-border bg-white p-4 shadow-sm">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search courses by title, slug, or description..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            className="pl-10"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary">
+              Clear
+            </button>
+          )}
+        </div>
+        {searchQuery.length >= 2 && searchResults !== undefined && (
+          <p className="mt-2 text-xs text-muted-foreground">{searchResults.length} result(s) for &quot;{searchQuery}&quot;</p>
+        )}
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <section className="grid gap-6 md:grid-cols-2">
-          {courses.map((course) => (
+          {liveCourses === undefined && searchQuery.length < 2 ? <LoadingPortalState label="Loading courses..." /> : null}
+          {liveCourses !== undefined && displayCourses.length === 0 ? (
+            <EmptyPortalState
+              variant="learning"
+              title="No courses yet"
+              description="Create the first course shell, then add text units, assignment units, and downloadable documents."
+              action={<div className="mt-5"><Button variant="primary" onClick={() => setOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Create Course</Button></div>}
+            />
+          ) : null}
+          {pageItems.map((course) => (
             <article key={course.id} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -67,13 +163,32 @@ export default function AdminCoursesPage() {
                     <PencilLine className="mr-2 h-4 w-4" /> Edit Course
                   </Link>
                 </Button>
-                <Button variant="outline" onClick={() => toast({ title: `${course.title} duplicated`, description: 'A draft copy was created with all modules and unit settings.', tone: 'success' })}>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await duplicateCourse({ courseId: course.id as any });
+                    toast({ title: `${course.title} duplicated`, description: 'A draft copy was created with all modules and unit settings.', tone: 'success' });
+                  }}
+                >
                   <Layers3 className="mr-2 h-4 w-4" /> Duplicate
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await deleteCourse({ courseId: course.id as any });
+                    toast({ title: `${course.title} deleted`, description: 'The course and all its modules, units, and data were permanently removed.', tone: 'warning' });
+                  }}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </Button>
               </div>
               <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">Updated {course.updated}</p>
             </article>
           ))}
+          <div className="md:col-span-2">
+            <PaginationControls page={page} totalPages={totalPages} totalItems={displayCourses.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          </div>
         </section>
 
         <aside className="space-y-6">
@@ -105,41 +220,44 @@ export default function AdminCoursesPage() {
 
       <PortalDialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => { setOpen(false); setUploadedFiles([]); }}
         title="Create Course"
-        description="Build the course shell before adding modules and units."
+        description="Build the course shell before adding modules and units. Optionally attach teaching documents."
         size="lg"
       >
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <Input placeholder="Course title" />
-            <div className="grid gap-4 md:grid-cols-2">
-              <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent">
-                <option>Course mode</option>
-                <option>Text only</option>
-                <option>Text + assignments</option>
-                <option>Text + documents</option>
-              </select>
-              <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent">
-                <option>Default audience</option>
-                <option>Ignite 2025</option>
-                <option>SURGE 2024</option>
-              </select>
-            </div>
-            <Textarea className="min-h-32" placeholder="Course overview, goals, and what learners should expect by completion." />
+            <Input placeholder="Course title" value={title} onChange={(event) => setTitle(event.target.value)} />
+            <Textarea className="min-h-32" placeholder="Course overview, goals, and what learners should expect by completion." value={synopsis} onChange={(event) => setSynopsis(event.target.value)} />
+            {uploadedFiles.length > 0 && (
+              <div className="rounded-2xl border border-border bg-surface p-4">
+                <p className="text-sm font-semibold text-primary mb-2">Attached files ({uploadedFiles.length})</p>
+                <ul className="space-y-1">
+                  {uploadedFiles.map((f, i) => (
+                    <li key={i} className="text-xs text-muted-foreground truncate">{f.fileName}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           <div className="space-y-4">
             <UploadDropzone
               title="Seed with teaching documents"
-              description="Attach an outline, handbook, or lesson notes so the team can scaffold content quickly."
-              accepted="PDF or DOCX"
+              description="Attach an outline, handbook, or lesson notes. Files will be saved in the course document folder."
+              accepted="PDF, DOCX, TXT"
+              accept=".pdf,.doc,.docx,.txt"
+              multiple
+              generateUploadUrl={generateUploadUrl}
+              onUploaded={async (file) => {
+                setUploadedFiles((prev) => [...prev, file]);
+              }}
             />
             <div className="rounded-2xl border border-border bg-surface p-4 text-sm text-muted-foreground">
               Each draft course starts with module and unit placeholders, autosave support, and assignment restriction controls.
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button variant="primary" onClick={() => { toast({ title: 'Draft course created', description: 'The team can now add modules, units, and publishing rules.', tone: 'success' }); setOpen(false); }}>
+              <Button variant="outline" onClick={() => { setOpen(false); setUploadedFiles([]); }}>Cancel</Button>
+              <Button variant="primary" onClick={handleCreate}>
                 <Sparkles className="mr-2 h-4 w-4" /> Create Draft
               </Button>
             </div>

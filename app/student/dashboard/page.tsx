@@ -1,159 +1,143 @@
 'use client';
 
 import Link from 'next/link';
-import { Award, Bell, CheckCircle2, Clock, Flame, FolderUp, MessageSquareText, PlayCircle } from 'lucide-react';
+import { Bell, BookOpenCheck, CheckCircle2, Clock, Flame, FolderUp, MessageSquareText } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
-import { courseCatalog } from '@/lib/portal-data';
-import { useToast } from '@/components/ui/toast';
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
 export default function StudentDashboard() {
-  const { toast } = useToast();
-  const featured = courseCatalog[0];
+  const dashboard = useQuery(api.portal.studentDashboard) as any | undefined;
+  const profile = dashboard?.profile;
+  const studentProfile = dashboard?.studentProfile;
+  const enrollments = dashboard?.courses ?? [];
+  
+  const liveCourses = enrollments.map((entry: any) => ({
+    id: entry.course?._id,
+    title: entry.course?.title ?? 'Untitled Course',
+    nextUnit: 'Continue reading',
+    progress: entry.progressPercent ?? 0,
+  }));
+  
+  const featured = liveCourses[0];
+  const studentName = profile?.name?.split(' ')[0] ?? 'Student';
+  const progress = studentProfile?.progressPercent ?? 0;
+  
+  const submissions = dashboard?.submissions ?? [];
+  const conversations = dashboard?.conversations ?? [];
+  const pendingCount = submissions.filter((s: any) => s.status === 'pending_review').length;
+  const unreadCount = conversations.filter((c: any) => c.unreadCount > 0).length;
 
   return (
     <div className="pb-12">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-display font-bold text-primary mb-1">Welcome back, Sarah!</h1>
-          <p className="text-muted text-lg">You&apos;re making great progress. Keep it up.</p>
+          <h1 className="mb-1 font-display text-3xl font-bold text-primary">Welcome back, {studentName}!</h1>
+          <p className="text-lg text-muted">You&apos;re making great progress. Keep it up.</p>
         </div>
-
-        <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 px-4 py-2 rounded-xl text-accent">
-          <Flame className="w-5 h-5 fill-accent stroke-accent" />
-          <span className="font-bold">14 Day Streak!</span>
+        <div className="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-2 text-accent">
+          <Flame className="h-5 w-5 fill-accent stroke-accent" />
+          <span className="font-bold">{progress}% Program Progress</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
           <section>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Jump Back In</h2>
-            <div className="bg-primary text-white rounded-2xl p-8 relative overflow-hidden shadow-lg border border-primary/20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(246,172,85,0.3),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)]" />
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-transparent" />
-
-              <div className="relative z-10">
-                <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block">{featured.title}</span>
-                <h3 className="text-3xl font-display font-bold mb-2">{featured.nextUnit}</h3>
-                <p className="text-white/80 mb-8 max-w-md">Module 1 • You are 12 minutes into this 25 minute guided lesson, with notes saved in your profile.</p>
-
-                <div className="flex items-center gap-4">
-                  <Button variant="white" size="lg" className="rounded-xl group" asChild>
-                    <Link href={`/student/courses/${featured.id}/learn`}>
-                      <PlayCircle className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                      Resume Lesson
-                    </Link>
-                  </Button>
-                  <span className="text-sm font-medium text-white/70">{featured.progress}% Course Complete</span>
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted">Jump Back In</h2>
+            {dashboard === undefined ? <LoadingPortalState label="Loading your dashboard..." /> : null}
+            {dashboard !== undefined && liveCourses.length === 0 ? (
+              <EmptyPortalState
+                variant="learning"
+                title="No courses assigned yet"
+                description="Your enrolled Ignite courses will appear here as soon as an admin assigns them to your profile."
+              />
+            ) : null}
+            {featured ? (
+              <Link href={`/student/courses/${featured.id}/learn`} className="group block rounded-2xl border border-border bg-white p-6 shadow-sm transition hover:border-accent hover:shadow-md">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-accent">Continue Learning</p>
+                    <h3 className="mt-2 font-display text-2xl font-bold text-primary">{featured.title}</h3>
+                  </div>
+                  <div className="shrink-0 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-bold text-accent">{featured.progress}%</div>
                 </div>
+                <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div className="h-full bg-accent transition-all" style={{ width: `${featured.progress}%` }} />
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-sm font-medium text-accent">
+                  <BookOpenCheck className="h-4 w-4" />
+                  <span>Continue Learning</span>
+                </div>
+              </Link>
+            ) : null}
+            {liveCourses.length > 1 && (
+              <div className="mt-4 grid gap-4">
+                {liveCourses.slice(1).map((course: any) => (
+                  <Link key={course.id} href={`/student/courses/${course.id}`} className="group flex items-center justify-between rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:border-accent hover:shadow-md">
+                    <div>
+                      <h4 className="font-bold text-primary">{course.title}</h4>
+                      <p className="text-sm text-muted-foreground">{course.progress}% complete</p>
+                    </div>
+                    <div className="h-2 w-16 overflow-hidden rounded-full bg-gray-100">
+                      <div className="h-full bg-accent" style={{ width: `${course.progress}%` }} />
+                    </div>
+                  </Link>
+                ))}
               </div>
-            </div>
+            )}
           </section>
 
           <section>
-            <div className="flex justify-between items-end mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted">My Courses</h2>
-              <Link href="/student/courses" className="text-sm font-medium text-accent hover:underline">View All</Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {courseCatalog.slice(1).map((course) => (
-                <Link key={course.id} href={`/student/courses/${course.id}`} className="bg-white p-5 rounded-2xl border border-border hover:shadow-md hover:border-accent/30 transition-all group">
-                  <h3 className="font-display font-bold text-lg text-primary mb-1 group-hover:text-accent transition-colors">{course.title}</h3>
-                  <p className="text-sm text-muted mb-4">Next up: {course.nextUnit}</p>
-                  <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
-                    <div className="bg-teal-500 h-2 rounded-full" style={{ width: `${course.progress}%` }} />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted font-medium">
-                    <span>{course.progress}% Complete</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Student Tools</h2>
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted">Quick Actions</h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => toast({ title: 'Upload panel ready', description: 'Student document submission is available from your assignments page.', tone: 'info' })}
-                className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md"
-              >
+              <Link href="/student/assignments" className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md">
                 <div className="mb-4 inline-flex rounded-2xl bg-accent/10 p-3 text-accent"><FolderUp className="h-5 w-5" /></div>
                 <h3 className="font-display text-lg font-bold text-primary">Upload coursework</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Static UI for document upload, submission rules, and confirmation toasts is already wired.</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => toast({ title: 'Mentor inbox available', description: 'Open Messages to continue the conversation with your mentor or instructor.', tone: 'success' })}
-                className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md"
-              >
+                <p className="mt-2 text-sm text-muted-foreground">Submit PDF, DOC, DOCX, or TXT documents from your assignments page.</p>
+              </Link>
+              <Link href="/student/messages" className="rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-accent hover:shadow-md">
                 <div className="mb-4 inline-flex rounded-2xl bg-primary/10 p-3 text-primary"><MessageSquareText className="h-5 w-5" /></div>
                 <h3 className="font-display text-lg font-bold text-primary">Mentor communication</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Direct messaging and notification surfaces are visible across the portal.</p>
-              </button>
+                <p className="mt-2 text-sm text-muted-foreground">Direct messaging and notification surfaces are connected to your portal profile.</p>
+              </Link>
             </div>
           </section>
         </div>
 
         <div className="space-y-8">
           <section>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">Up Next</h2>
-            <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-border bg-red-50/50 flex items-start gap-4">
-                <div className="bg-red-100 text-red-600 p-2 rounded-lg shrink-0 mt-0.5">
-                  <Clock className="w-5 h-5" />
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted">Up Next</h2>
+            <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+              {pendingCount > 0 && (
+                <div className="flex items-start gap-4 border-b border-border p-4">
+                  <div className="mt-0.5 shrink-0 rounded-lg bg-surface p-2 text-accent"><Clock className="h-5 w-5" /></div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">Pending assignment</h4>
+                    <p className="my-1 text-sm text-gray-600">You have {pendingCount} submission(s) awaiting review.</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Career Reflection Essay</h4>
-                  <p className="text-sm text-red-600 font-medium my-1">Due Today • 11:59 PM</p>
-                  <Button variant="outline" size="sm" className="mt-2 text-xs border-red-200 hover:bg-red-50" asChild>
-                    <Link href="/student/assignments">Submit Now</Link>
-                  </Button>
+              )}
+              {unreadCount > 0 && (
+                <div className="flex items-start gap-4 border-b border-border p-4">
+                  <div className="mt-0.5 shrink-0 rounded-lg bg-surface p-2 text-accent"><Bell className="h-5 w-5" /></div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">New announcement</h4>
+                    <p className="my-1 text-sm text-gray-600">You have {unreadCount} unread message(s).</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="p-4 border-b border-border flex items-start gap-4">
-                <div className="bg-blue-50 text-blue-600 p-2 rounded-lg shrink-0 mt-0.5">
-                  <Bell className="w-5 h-5" />
+              )}
+              {pendingCount === 0 && unreadCount === 0 && (
+                <div className="flex items-start gap-4 border-b border-border p-4">
+                  <div className="mt-0.5 shrink-0 rounded-lg bg-surface p-2 text-green-600"><CheckCircle2 className="h-5 w-5" /></div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">All caught up</h4>
+                    <p className="my-1 text-sm text-gray-600">No pending items at the moment.</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">New Module Unlocked</h4>
-                  <p className="text-sm text-gray-600 my-1">Digital Literacy: Presentations</p>
-                </div>
-              </div>
-
-              <div className="p-4 flex items-start gap-4">
-                <div className="bg-green-50 text-green-600 p-2 rounded-lg shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Assignment Graded</h4>
-                  <p className="text-sm text-gray-600 my-1">Discipleship 101: Week 2 Quiz</p>
-                  <p className="text-xs font-bold text-green-600 mt-1">Score: 95%</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <div className="flex justify-between items-end mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Recent Badges</h2>
-            </div>
-            <div className="bg-white rounded-2xl border border-border p-6 shadow-sm flex gap-4">
-              <div className="text-center group">
-                <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-2 border-2 border-amber-200 group-hover:scale-110 transition-transform">
-                  <Award className="w-8 h-8 text-amber-600" />
-                </div>
-                <span className="text-xs font-bold text-gray-700 block">Fast Learner</span>
-              </div>
-              <div className="text-center group opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-2 border-2 border-gray-200 group-hover:scale-110 transition-transform">
-                  <Flame className="w-8 h-8 text-gray-400 group-hover:text-orange-500" />
-                </div>
-                <span className="text-xs font-bold text-gray-700 block mt-2">1 Month Streak</span>
-              </div>
+              )}
             </div>
           </section>
         </div>

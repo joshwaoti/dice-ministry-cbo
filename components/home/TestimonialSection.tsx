@@ -14,16 +14,28 @@ const testimonials = [
     image: testimonialImage
   },
   {
-    quote: "Through the Ignite program, I discovered my true calling. The mentorship and guidance provided by the leaders here gave me clarity in a world full of noise.",
-    author: "Mark Omondi",
-    cohort: "Ignite 2023",
-    image: testimonialImage
+    quote: "I've had one of the best experiences in DICE Ministry. I enjoyed getting to know God more. I've been equipped, transformed, challenged, sharpened, and built up effectively. The training has helped me develop a different perspective of life.",
+    author: "Dennis Eshuchi",
+    cohort: "SURGE 20",
+    image: "/images/dennis eshuchi.jpeg"
   },
   {
-    quote: "The community I found here has become like family. Never have I felt so supported, spiritually fed, and equipped to face the challenges of university life.",
-    author: "Sarah Muthoni",
+    quote: "DICE is a place where I learned more about my personality traits. Through the lessons, I was able to identify my personality type and gain a clearer understanding of the best career path for me.",
+    author: "Beryl Adhiambo",
+    cohort: "SURGE 23",
+    image: "/images/Beryl-2.jpg"
+  },
+  {
+    quote: "I came to this program to learn but I have found conviction. I have found conviction on what it means to love God. I came here as a mess. I have found healing at DICE.",
+    author: "Emmah Mwangi",
+    cohort: "SURGE 21",
+    image: "/images/Emma.jpg"
+  },
+  {
+    quote: "Before joining DICE, I lacked confidence in sharing the Gospel with others, especially in large groups. SURGE has equipped me and given me the confidence to boldly share my faith with others.",
+    author: "Dennis Songa",
     cohort: "SURGE 24",
-    image: testimonialImage
+    image: "/images/songa.jpg"
   }
 ];
 
@@ -101,12 +113,21 @@ export function TestimonialSection() {
 
               <div className="flex items-center justify-center gap-4">
                 <div className="w-14 h-14 rounded-full overflow-hidden relative border border-border">
-                  <Image
-                    src={testimonials[index].image}
-                    alt={testimonials[index].author}
-                    fill
-                    className="object-cover"
-                  />
+                  {typeof testimonials[index].image === 'string' ? (
+                    <Image
+                      src={testimonials[index].image}
+                      alt={testimonials[index].author}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={(testimonials[index].image as any).src}
+                      alt={testimonials[index].author}
+                      fill
+                      className="object-cover"
+                    />
+                  )}
                 </div>
                 <div className="text-left flex flex-col justify-center">
                   <div className="font-bold text-primary">{testimonials[index].author}</div>

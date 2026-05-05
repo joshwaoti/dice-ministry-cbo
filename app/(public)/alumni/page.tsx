@@ -1,9 +1,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import { AlumniCard } from '@/components/public/AlumniCard';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { AlumniStoryForm } from '@/components/public/AlumniStoryForm';
 import alumniHero from '@/images/diceministry/work (1).avif';
 import daisyImage from '@/images/diceministry/Jane Watetu.jpg';
 import markImage from '@/images/diceministry/Maurice Agunda.jpg';
@@ -72,27 +70,7 @@ export default function AlumniPage() {
               <p className="text-muted">Share your story. Submissions go to our admin team for review before publishing.</p>
             </div>
 
-            <form className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                  <Input id="name" required placeholder="Your full name" />
-                </div>
-                <div>
-                  <label htmlFor="cohort" className="block text-sm font-medium text-gray-700 mb-1">Cohort Year</label>
-                  <Input id="cohort" required placeholder="e.g. Ignite 2023" />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="update" className="block text-sm font-medium text-gray-700 mb-1">Current Update</label>
-                <Input id="update" required placeholder="e.g. Now studying at University of Nairobi" />
-              </div>
-              <div>
-                <label htmlFor="story" className="block text-sm font-medium text-gray-700 mb-1">Your Story</label>
-                <Textarea id="story" required placeholder="How did the program impact you?" rows={4} />
-              </div>
-              <Button type="button" variant="primary" className="w-full">Submit Story</Button>
-            </form>
+            <AlumniStoryForm />
           </div>
         </div>
       </section>

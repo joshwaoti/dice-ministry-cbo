@@ -1,23 +1,51 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/images/dice_I.avif';
 
+const heroSlides = [
+  { src: '/images/Edit-215.jpg.jpeg', alt: 'DICE Ministry event' },
+  { src: '/images/SURGE 24 Retreat-17.jpg.jpeg', alt: 'SURGE 24 Retreat' },
+  { src: '/images/SURGE 24-24.jpg.jpeg', alt: 'SURGE 24 gathering' },
+  { src: heroImage.src, alt: 'DICE Ministry participants gathered together' },
+];
+
 export function HeroSection() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <section className="relative min-h-screen overflow-hidden bg-primary">
-      <Image
-        src={heroImage}
-        alt="DICE Ministry participants gathered together"
-        fill
-        priority
-        className="object-cover object-center"
-        sizes="100vw"
-      />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute inset-0"
+        >
+          <Image
+            src={heroSlides[currentIndex].src}
+            alt={heroSlides[currentIndex].alt}
+            fill
+            priority
+            className="object-cover object-center"
+            sizes="100vw"
+          />
+        </motion.div>
+      </AnimatePresence>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,25,49,0.94)_0%,rgba(10,25,49,0.88)_38%,rgba(10,25,49,0.45)_62%,rgba(10,25,49,0.08)_100%)]" />
       <div
         className="absolute inset-0 opacity-[0.06] pointer-events-none"
@@ -71,6 +99,18 @@ export function HeroSection() {
             </Button>
           </motion.div>
         </div>
+      </div>
+
+      {/* Slide indicators */}
+      <div className="absolute bottom-20 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+        {heroSlides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={`h-1.5 rounded-full transition-all duration-500 ${i === currentIndex ? 'w-8 bg-white' : 'w-4 bg-white/40 hover:bg-white/60'}`}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
       </div>
 
       <motion.div

@@ -7,10 +7,12 @@ import { TestimonialSection } from '@/components/home/TestimonialSection';
 import { OurWorkPreview } from '@/components/home/OurWorkPreview';
 import { PartnersStrip } from '@/components/home/PartnersStrip';
 import { CTABanner } from '@/components/home/CTABanner';
+import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
 
 export default function HomePage() {
   return (
     <>
+      <AnnouncementBanner />
       <HeroSection />
       <QuickNavCards />
       <MissionStrip />

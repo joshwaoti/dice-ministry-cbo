@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Facebook, Instagram, Youtube } from 'lucide-react';
 
 export function Footer() {
@@ -8,8 +9,13 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_1fr_1fr_1.1fr]">
           <div className="space-y-6">
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-xl font-bold text-white">
-                D
+              <div className="relative h-10 w-10">
+                <Image
+                  src="/images/Logo-1-White.png"
+                  alt="DICE Ministry Logo"
+                  fill
+                  className="object-contain"
+                />
               </div>
               <span className="font-display text-xl font-bold tracking-tight">DICE Ministry</span>
             </Link>
@@ -18,13 +24,13 @@ export function Footer() {
               God-given potential.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
+              <a href="https://www.facebook.com/DICEMinistryKenya" target="_blank" rel="noopener noreferrer" aria-label="DICE Ministry on Facebook" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
+              <a href="https://www.instagram.com/diceministrykenya/" target="_blank" rel="noopener noreferrer" aria-label="DICE Ministry on Instagram" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
+              <a href="https://www.youtube.com/@diceministrykenya8253" target="_blank" rel="noopener noreferrer" aria-label="DICE Ministry on YouTube" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-accent">
                 <Youtube className="h-5 w-5" />
               </a>
             </div>

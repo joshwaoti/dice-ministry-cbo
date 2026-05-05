@@ -1,18 +1,44 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation, useQuery } from 'convex/react';
 import { FileUp, Send, ShieldCheck } from 'lucide-react';
+import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
-import { studentAssignments } from '@/lib/portal-data';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
+import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
+
+const PAGE_SIZE = 5;
 
 export default function StudentAssignments() {
   const [activeTab, setActiveTab] = useState<'Pending' | 'Submitted' | 'Graded'>('Pending');
+  const [page, setPage] = useState(1);
+  const liveAssignments = useQuery(api.assignments.listForStudent, {}) as any[] | undefined;
+  const generateUploadUrl = useMutation(api.documents.generateStudentUploadUrl);
+  const submitAssignment = useMutation(api.assignments.submit);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const { toast } = useToast();
-  const visibleAssignments = studentAssignments.filter((assignment) => assignment.status === activeTab);
+  const assignments = liveAssignments?.map((assignment) => {
+    const status = assignment.submission?.status === 'pass' ? 'Graded' : assignment.submission ? 'Submitted' : 'Pending';
+    return {
+      id: assignment._id,
+      title: assignment.title,
+      course: assignment.course?.title ?? 'Course unavailable',
+      due: assignment.dueAt ? new Date(assignment.dueAt).toLocaleDateString() : 'No due date',
+      instructions: assignment.instructions,
+      accepted: assignment.allowedTypes?.join(', ').toUpperCase() ?? 'PDF, DOC, DOCX, TXT',
+      status,
+      grade: assignment.submission?.grade ?? 'Pending',
+      isLive: true,
+    };
+  }) ?? [];
+  const visibleAssignments = assignments.filter((assignment) => assignment.status === activeTab);
+  const { pageItems, totalPages } = paginate(visibleAssignments, page, PAGE_SIZE);
 
   return (
     <div className="space-y-8 max-w-full pb-10">
@@ -34,12 +60,20 @@ export default function StudentAssignments() {
                   activeTab === tab ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-primary'
                 }`}
               >
-                {tab} ({studentAssignments.filter((assignment) => assignment.status === tab).length})
+                {tab} ({assignments.filter((assignment) => assignment.status === tab).length})
               </button>
             ))}
           </div>
           <div className="space-y-4 p-4 md:p-6">
-            {visibleAssignments.map((assignment) => (
+            {liveAssignments === undefined ? <LoadingPortalState label="Loading assignments..." /> : null}
+            {liveAssignments !== undefined && visibleAssignments.length === 0 ? (
+              <EmptyPortalState
+                variant="documents"
+                title={`No ${activeTab.toLowerCase()} assignments`}
+                description="Assignment tasks and document submissions will appear here when they are assigned to your enrolled courses."
+              />
+            ) : null}
+            {pageItems.map((assignment) => (
               <div key={assignment.id} className="rounded-[22px] border border-border p-5 transition hover:border-accent">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-2xl">
@@ -54,12 +88,14 @@ export default function StudentAssignments() {
                   </div>
                   <div className="flex flex-col gap-3">
                     {assignment.status === 'Pending' ? (
-                      <Button variant="primary" onClick={() => toast({ title: 'Submission staged', description: `Files for ${assignment.title} are ready to upload.`, tone: 'success' })}>
+                      <Button variant="primary" onClick={() => {
+                        setSelectedAssignmentId(assignment.id);
+                      }}>
                         <FileUp className="mr-2 h-4 w-4" /> Submit Assignment
                       </Button>
                     ) : null}
                     {assignment.status === 'Submitted' ? (
-                      <Button variant="outline" onClick={() => toast({ title: 'Resubmission opened', description: `A new upload slot is available for ${assignment.title}.`, tone: 'info' })}>
+                      <Button variant="outline" onClick={() => setSelectedAssignmentId(assignment.id)}>
                         <Send className="mr-2 h-4 w-4" /> Resubmit Work
                       </Button>
                     ) : null}
@@ -73,6 +109,7 @@ export default function StudentAssignments() {
               </div>
             ))}
           </div>
+          <PaginationControls page={page} totalPages={totalPages} totalItems={visibleAssignments.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </section>
 
         <aside className="space-y-6">
@@ -81,8 +118,23 @@ export default function StudentAssignments() {
             <div className="mt-5">
               <UploadDropzone
                 title="Assignment files"
-                description="Upload documents, spreadsheets, or PDFs for the selected assignment."
-                accepted="PDF, DOCX, XLSX"
+                description={selectedAssignmentId ? 'Upload PDFs, Word documents, or text files for the selected assignment.' : 'Choose Submit Assignment on the left before selecting a file.'}
+                accepted="PDF, DOC, DOCX, TXT"
+                accept=".pdf,.doc,.docx,.txt"
+                disabled={!selectedAssignmentId}
+                generateUploadUrl={generateUploadUrl}
+                onUploaded={async (file) => {
+                  if (!selectedAssignmentId) return;
+                  await submitAssignment({
+                    assignmentId: selectedAssignmentId as any,
+                    storageId: file.storageId as any,
+                    fileName: file.fileName,
+                    contentType: file.contentType,
+                    size: file.size,
+                    notes: 'Uploaded from student assignment workspace.',
+                  });
+                  setSelectedAssignmentId(null);
+                }}
                 helper="A confirmation toast fires on upload actions so students receive immediate feedback."
               />
             </div>

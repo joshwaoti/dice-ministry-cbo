@@ -2,43 +2,50 @@
 
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import Link from 'next/link';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
-export function AnnouncementBanner({ message, linkText, linkHref }: { message: string, linkText: string, linkHref: string }) {
-  const [isVisible, setIsVisible] = useState(false);
+export function AnnouncementBanner() {
+  const [visibleId, setVisibleId] = useState<string | null>(null);
+  const announcement = useQuery(api.announcements.listPublicBanner);
+  const dismissalKey = announcement ? `dismissed_banner_${announcement._id}` : null;
 
   useEffect(() => {
-    // Check session storage first
-    if (!sessionStorage.getItem('dismissed_banner')) {
-      // Delay display by 800ms
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 800);
-      return () => clearTimeout(timer);
+    if (!dismissalKey || !announcement) return;
+    if (!sessionStorage.getItem(dismissalKey)) {
+      const timer = window.setTimeout(() => setVisibleId(announcement._id), 0);
+      return () => window.clearTimeout(timer);
     }
-  }, []);
+  }, [announcement, dismissalKey]);
 
   const handleDismiss = () => {
-    setIsVisible(false);
-    sessionStorage.setItem('dismissed_banner', 'true');
+    setVisibleId(null);
+    if (dismissalKey) sessionStorage.setItem(dismissalKey, 'true');
   };
 
-  if (!isVisible) return null;
+  if (announcement === undefined) {
+    return (
+      <div className="flex min-h-10 items-center justify-center bg-primary text-white">
+        <LoadingSpinner label="Loading announcement..." className="text-white" />
+      </div>
+    );
+  }
+  if (!announcement) return null;
+  if (visibleId !== announcement._id) return null;
 
   return (
-    <div className="bg-orange-500 text-white h-9 flex items-center justify-center px-4 relative text-sm font-medium animate-in slide-in-from-top duration-500 z-50">
-      <div className="flex items-center gap-2">
-        <span>{message}</span>
-        <Link href={linkHref} className="underline hover:text-white/80 transition-colors">
-          {linkText}
-        </Link>
+    <div className="relative z-50 flex min-h-11 items-center justify-center bg-primary px-12 py-2 text-center text-sm font-medium text-white shadow-sm animate-in slide-in-from-top duration-500">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <span className="font-semibold text-gold">{announcement.title}</span>
+        <span className="text-white/90">{announcement.body}</span>
       </div>
-      <button 
+      <button
         onClick={handleDismiss}
-        className="absolute right-4 hover:bg-white/20 p-1 rounded transition-colors"
+        className="absolute right-4 rounded p-1 transition-colors hover:bg-white/20"
         aria-label="Dismiss banner"
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

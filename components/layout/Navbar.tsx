@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ChevronDown, HeartHandshake, GraduationCap, Users } from 'lucide-react';
@@ -55,9 +56,13 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center text-white font-display font-bold text-xl relative group">
-                  <div className="absolute inset-0 -z-10 rounded-lg bg-[#F6AC55] opacity-0 transition-opacity group-hover:animate-ping group-hover:opacity-60"></div>
-              D
+            <div className="relative w-10 h-10">
+              <Image
+                src={transparentMode ? "/images/Logo-1-White.png" : "/images/Logo-1.png"}
+                alt="DICE Ministry Logo"
+                fill
+                className="object-contain"
+              />
             </div>
             <span className={cn('font-display font-bold text-xl tracking-tight transition-colors', 
               transparentMode ? 'text-white' : 'text-primary'

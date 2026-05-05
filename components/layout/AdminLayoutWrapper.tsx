@@ -1,34 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Menu, X, LayoutDashboard, Users, BookOpen, FileCheck, MessageSquare, Megaphone, Settings, LogOut, ClipboardList, FolderKanban, UserCog, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-
-const LINKS = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Students', href: '/admin/students', icon: Users },
-  { name: 'Applications', href: '/admin/applications', icon: ClipboardList, badge: 3 },
-  { name: 'Courses', href: '/admin/courses', icon: BookOpen },
-  { name: 'Assignments', href: '/admin/assignments', icon: FileCheck, badge: 5 },
-  { name: 'Messages', href: '/admin/messages', icon: MessageSquare, badge: 1, badgeClass: 'bg-gold text-primary' },
-  { name: 'Documents', href: '/admin/documents', icon: FolderKanban },
-  { name: 'Admin Users', href: '/admin/users', icon: UserCog },
-  { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
-];
+import { useClerk } from '@clerk/nextjs';
 
 export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useClerk();
+  
+  const dashboard = useQuery(api.portal.adminDashboard) as any | undefined;
+  const metrics = dashboard?.metrics;
+  
+  const pendingCount = metrics?.pendingSubmissions ?? 0;
+  const unreadMessages = metrics?.unreadMessages ?? 0;
+  const newApplications = metrics?.newApplications ?? 0;
+
+  const LINKS = [
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Students', href: '/admin/students', icon: Users },
+    { name: 'Applications', href: '/admin/applications', icon: ClipboardList, badge: newApplications > 0 ? newApplications : undefined },
+    { name: 'Courses', href: '/admin/courses', icon: BookOpen },
+    { name: 'Assignments', href: '/admin/assignments', icon: FileCheck, badge: pendingCount > 0 ? pendingCount : undefined },
+    { name: 'Messages', href: '/admin/messages', icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages : undefined, badgeClass: 'bg-gold text-primary' },
+    { name: 'Documents', href: '/admin/documents', icon: FolderKanban },
+    { name: 'Admin Users', href: '/admin/users', icon: UserCog },
+    { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+  ];
+
+  const handleLogout = () => {
+    signOut(() => router.push('/'));
+  };
 
   const renderSidebarContent = (collapsed = false) => (
     <>
       <div className="p-6 flex items-center justify-between md:justify-start">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">D</div>
+          <div className="relative w-8 h-8">
+            <Image
+              src="/images/Logo-1-White.png"
+              alt="DICE Ministry Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           {!collapsed ? <span className="font-display font-bold text-lg text-white">DICE Admin</span> : null}
         </div>
         <div className="flex items-center gap-2">
@@ -62,7 +86,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
                 <link.icon className="w-5 h-5 shrink-0" /> 
                 {!collapsed ? <span className="truncate">{link.name}</span> : null}
               </div>
-              {!collapsed && link.badge && (
+              {!collapsed && link.badge !== undefined && link.badge > 0 && (
                 <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full shrink-0", link.badgeClass || "bg-accent text-white")}>{link.badge}</span>
               )}
             </Link>
@@ -74,9 +98,9 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
         <Link href="/admin/settings" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
           <Settings className="w-5 h-5 shrink-0" /> {!collapsed ? 'Settings' : null}
         </Link>
-        <Link href="/" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors" onClick={() => setMobileMenuOpen(false)}>
+        <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors w-full">
           <LogOut className="w-5 h-5 shrink-0" /> {!collapsed ? 'Logout' : null}
-        </Link>
+        </button>
       </div>
     </>
   );
@@ -86,7 +110,14 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-primary z-20 px-4 flex items-center justify-between shrink-0">
          <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">D</div>
+          <div className="relative w-8 h-8">
+            <Image
+              src="/images/Logo-1-White.png"
+              alt="DICE Ministry Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           <span className="font-display font-bold text-lg text-white">DICE Admin</span>
         </div>
         <button className="text-white p-2" onClick={() => setMobileMenuOpen(true)}>
@@ -124,7 +155,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="mt-16 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:mt-0 md:p-8">
+      <main className="mt-16 w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:mt-0 md:p-8">
         <div className="mx-auto max-w-7xl w-full min-w-0">
           {children}
         </div>

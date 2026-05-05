@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ContactForm } from '@/components/public/ContactForm';
 import { ImageCarousel } from '@/components/public/ImageCarousel';
 import { wixPublicContent } from '@/lib/wix-public-content';
 
@@ -32,41 +31,7 @@ export default function ContactPage() {
               <h2 className="mb-3 text-2xl font-display font-bold text-primary">{contact.introTitle}</h2>
               <p className="text-base leading-8 text-muted-foreground">{contact.intro}</p>
             </div>
-            <form className="space-y-5">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="first-name" className="text-sm font-medium text-primary">
-                    {contact.labels.firstName}
-                  </label>
-                  <Input id="first-name" />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="last-name" className="text-sm font-medium text-primary">
-                    {contact.labels.lastName}
-                  </label>
-                  <Input id="last-name" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-primary">
-                  {contact.labels.email}
-                </label>
-                <Input id="email" type="email" />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="message" className="text-sm font-medium text-primary">
-                  {contact.labels.message}
-                </label>
-                <textarea
-                  id="message"
-                  className="min-h-[180px] w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-                />
-              </div>
-              <Button size="lg" variant="primary" type="button">
-                {contact.labels.submit}
-              </Button>
-            </form>
-            <p className="mt-6 text-sm leading-7 text-muted-foreground">{contact.success}</p>
+            <ContactForm labels={contact.labels} success={contact.success} />
           </div>
 
           <div className="space-y-6">
