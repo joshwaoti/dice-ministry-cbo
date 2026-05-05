@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useQuery, useMutation } from 'convex/react';
@@ -11,8 +12,6 @@ import {
   Megaphone, Download, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ActivityHeatmap } from '@/components/admin/ActivityHeatmap';
 import { useToast } from '@/components/ui/toast';
 import { PortalDialog } from '@/components/portal/PortalDialog';
 import { Input } from '@/components/ui/input';
@@ -20,9 +19,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 
+const DashboardCharts = dynamic(() => import('@/components/admin/DashboardCharts').then((mod) => mod.DashboardCharts), {
+  ssr: false,
+  loading: () => <LoadingPortalState label="Loading charts..." />,
+});
+
+const DashboardHeatmap = dynamic(() => import('@/components/admin/DashboardHeatmap').then((mod) => mod.DashboardHeatmap), {
+  ssr: false,
+  loading: () => <LoadingPortalState label="Loading activity..." />,
+});
+
 export default function AdminDashboard() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setTimeout(() => setMounted(true), 0) }, []);
   const dashboard = useQuery(api.portal.adminDashboard) as any | undefined;
   const liveMetrics = dashboard?.metrics;
   const submitApplication = useMutation(api.applications.submitApplication);
@@ -168,61 +175,15 @@ export default function AdminDashboard() {
       </div>
 
       {/* CHARTS SECTION */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-        <div className="xl:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-border">
-          <h2 className="text-lg font-display font-bold text-primary mb-6">Monthly Enrollments</h2>
-          <div className="h-[300px] w-full">
-            {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={enrollmentData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
-                  <RechartsTooltip 
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#F6AC55"
-                    strokeWidth={3}
-                    dot={{ fill: '#F6AC55', strokeWidth: 0, r: 4 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                    animationDuration={1500}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : <div className="w-full h-full bg-gray-100 animate-pulse rounded-xl"></div>}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
-          <h2 className="text-lg font-display font-bold text-primary mb-6">Course Completion</h2>
-          <div className="h-[300px] w-full">
-            {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={liveCompletionData} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                  <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
-                  <YAxis dataKey="course" type="category" axisLine={false} tickLine={false} tick={{fill: '#374151', fontSize: 12}} width={100} />
-                  <RechartsTooltip cursor={{fill: 'transparent'}} />
-                  <Bar dataKey="percent" radius={[0, 4, 4, 0]} barSize={24} animationDuration={1500}>
-                    {liveCompletionData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={entry.percent > 70 ? '#10B981' : entry.percent > 40 ? '#F59E0B' : '#EF4444'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : <div className="w-full h-full bg-gray-100 animate-pulse rounded-xl"></div>}
-          </div>
-        </div>
+      <div className="mb-8">
+        <DashboardCharts enrollmentData={enrollmentData} completionData={liveCompletionData} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* HEATMAP */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
           <h2 className="text-lg font-display font-bold text-primary mb-6">Submission Activity</h2>
-          <ActivityHeatmap data={[]} />
+          <DashboardHeatmap />
         </div>
 
         {/* RECENT ACTIVITY */}

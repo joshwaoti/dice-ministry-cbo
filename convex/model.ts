@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ConvexError } from 'convex/values';
 import { Doc, Id } from './_generated/dataModel';
 import { MutationCtx, QueryCtx } from './_generated/server';
@@ -17,9 +16,18 @@ export async function getProfileByClerkUserId(ctx: QueryCtx | MutationCtx, clerk
     .unique();
 }
 
+export async function getProfileByClerkTokenIdentifier(ctx: QueryCtx | MutationCtx, clerkTokenIdentifier: string) {
+  return await ctx.db
+    .query('profiles')
+    .withIndex('by_clerk_token_identifier', (q) => q.eq('clerkTokenIdentifier', clerkTokenIdentifier))
+    .unique();
+}
+
 export async function getCurrentProfile(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
+  const profile = await getProfileByClerkTokenIdentifier(ctx, identity.tokenIdentifier);
+  if (profile) return profile;
   return await getProfileByClerkUserId(ctx, identity.subject);
 }
 
@@ -102,18 +110,31 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+export const ALLOWED_DOCUMENT_CONTENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'image/jpeg',
+  'image/png',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+] as const;
+
 export function assertDocumentContentType(contentType: string) {
-  const allowed = new Set([
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain',
-    'image/jpeg',
-    'image/png',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  ]);
+  const allowed = new Set<string>(ALLOWED_DOCUMENT_CONTENT_TYPES);
   if (!allowed.has(contentType)) {
     throw new ConvexError('Only document and image files are allowed. Video, audio, and ZIP uploads are not supported.');
+  }
+}
+
+export function assertDocumentSize(size: number, maxBytes = MAX_UPLOAD_BYTES) {
+  if (!Number.isFinite(size) || size <= 0) {
+    throw new ConvexError('File size is invalid.');
+  }
+  if (size > maxBytes) {
+    throw new ConvexError(`File exceeds the ${(maxBytes / 1024 / 1024).toFixed(0)}MB upload limit.`);
   }
 }

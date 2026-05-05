@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { ConvexError, v } from 'convex/values';
 import { mutation, query } from './_generated/server';
-import { getCurrentProfile, normalizeEmail, writeAudit } from './model';
+import { getCurrentProfile, getProfileByClerkTokenIdentifier, normalizeEmail, writeAudit } from './model';
 
 function getPrimaryEmail(data: any) {
   const primaryId = data.primary_email_address_id;
@@ -62,6 +61,7 @@ export const bootstrapSuperAdmin = mutation({
     const now = Date.now();
     const profileId = await ctx.db.insert('profiles', {
       clerkUserId: identity.subject,
+      clerkTokenIdentifier: identity.tokenIdentifier,
       email: normalizeEmail(args.email),
       name: args.name,
       role: 'super_admin',
@@ -93,10 +93,14 @@ export const completeFirstLogin = mutation({
   handler: async (ctx) => {
     const profile = await getCurrentProfile(ctx);
     if (!profile) throw new ConvexError('Profile not found.');
+    const identity = await ctx.auth.getUserIdentity();
+    const tokenPatch = identity && profile.clerkTokenIdentifier !== identity.tokenIdentifier
+      ? { clerkTokenIdentifier: identity.tokenIdentifier }
+      : {};
     if (!profile.firstLoginAt) {
-      await ctx.db.patch(profile._id, { firstLoginAt: Date.now(), lastActiveAt: Date.now(), updatedAt: Date.now() });
+      await ctx.db.patch(profile._id, { ...tokenPatch, firstLoginAt: Date.now(), lastActiveAt: Date.now(), updatedAt: Date.now() });
     } else {
-      await ctx.db.patch(profile._id, { lastActiveAt: Date.now(), updatedAt: Date.now() });
+      await ctx.db.patch(profile._id, { ...tokenPatch, lastActiveAt: Date.now(), updatedAt: Date.now() });
     }
   },
 });
@@ -109,11 +113,19 @@ export const claimSignedInProfile = mutation({
     const email = normalizeEmail(identity.email ?? '');
     if (!email) throw new ConvexError('Your Clerk account does not have a primary email address.');
 
+    const byTokenIdentifier = await getProfileByClerkTokenIdentifier(ctx, identity.tokenIdentifier);
+    if (byTokenIdentifier) return byTokenIdentifier._id;
+
     const byClerkId = await ctx.db
       .query('profiles')
       .withIndex('by_clerk_user_id', (q) => q.eq('clerkUserId', identity.subject))
       .unique();
-    if (byClerkId) return byClerkId._id;
+    if (byClerkId) {
+      if (!byClerkId.clerkTokenIdentifier) {
+        await ctx.db.patch(byClerkId._id, { clerkTokenIdentifier: identity.tokenIdentifier, updatedAt: Date.now() });
+      }
+      return byClerkId._id;
+    }
 
     const byEmail = await ctx.db.query('profiles').withIndex('by_email', (q) => q.eq('email', email)).unique();
     if (!byEmail) return null;
@@ -124,6 +136,7 @@ export const claimSignedInProfile = mutation({
     const now = Date.now();
     const patch: any = {
       clerkUserId: identity.subject,
+      clerkTokenIdentifier: identity.tokenIdentifier,
       status: byEmail.status === 'pending_invite' ? 'active' : byEmail.status,
       firstLoginAt: byEmail.firstLoginAt ?? now,
       lastActiveAt: now,
@@ -168,11 +181,13 @@ export const updateSelf = mutation({
   handler: async (ctx, args) => {
     const profile = await getCurrentProfile(ctx);
     if (!profile) throw new ConvexError('Profile not found.');
+    const identity = await ctx.auth.getUserIdentity();
     await ctx.db.patch(profile._id, {
       name: args.name?.trim() || profile.name,
       phone: args.phone,
       avatarUrl: args.avatarUrl,
       avatarStorageId: args.avatarStorageId,
+      clerkTokenIdentifier: identity?.tokenIdentifier ?? profile.clerkTokenIdentifier,
       updatedAt: Date.now(),
     });
     return profile._id;

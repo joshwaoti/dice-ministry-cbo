@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useMutation, useQuery } from 'convex/react';
 import { BookOpenCheck, ClipboardCheck, FileUp, ListTree, Plus, Save, Send, Trash2, Edit2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
@@ -8,12 +9,16 @@ import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
-import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { useToast } from '@/components/ui/toast';
 import { Input } from '@/components/ui/input';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { PortalDialog } from '@/components/portal/PortalDialog';
+
+const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor').then((mod) => mod.RichTextEditor), {
+  ssr: false,
+  loading: () => <LoadingPortalState label="Loading editor..." />,
+});
 
 function canQueryConvexId(id: string) {
   return id.length > 20 && !id.includes('-');

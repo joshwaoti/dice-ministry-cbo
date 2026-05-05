@@ -22,8 +22,8 @@ export default function LoginPage() {
   const [portal, setPortal] = useState<'student' | 'admin'>('student');
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f7f4ef]">
-      <div className="relative hidden h-screen w-[44%] flex-col overflow-hidden bg-primary lg:flex">
+    <main className="flex h-screen w-full overflow-hidden bg-[#f7f4ef]">
+      <aside className="relative hidden h-screen w-[44%] flex-col overflow-hidden bg-primary lg:flex" aria-label="DICE Ministry portal introduction">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(14,41,115,1),rgba(33,62,140,0.94))]" />
         <div className="relative z-10 flex items-center gap-3 p-6">
           <div className="relative h-10 w-10">
@@ -55,13 +55,14 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-      </div>
+      </aside>
 
       <motion.div
         initial={{ x: 40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="relative z-10 flex h-screen w-full flex-1 items-center justify-center overflow-hidden bg-[#f7f4ef] lg:w-[56%]"
+        aria-labelledby="login-heading"
       >
         <div className="mx-auto flex h-screen w-full max-w-[520px] flex-col justify-center px-5 py-4 sm:px-8">
           <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
@@ -77,7 +78,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-4 text-center">
-            <h1 className="mb-2 font-display text-3xl font-bold text-primary">Welcome Back</h1>
+            <h1 id="login-heading" className="mb-2 font-display text-3xl font-bold text-primary">Welcome Back</h1>
             <p className="text-muted-foreground">{portal === 'student' ? 'Approved students sign in to continue coursework.' : 'Invited admins and moderators sign in to manage the portal.'}</p>
           </div>
 
@@ -145,6 +146,6 @@ export default function LoginPage() {
           ) : null}
         </div>
       </motion.div>
-    </div>
+    </main>
   );
 }

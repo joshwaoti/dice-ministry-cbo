@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { ConvexError, v } from 'convex/values';
+import { Doc } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
-import { assertDocumentContentType, requireAdmin, requireProfile, requireStudent } from './model';
+import { assertDocumentContentType, assertDocumentSize, requireAdmin, requireProfile, requireStudent } from './model';
 
 async function assertConversationAccess(ctx: any, profile: any, conversationId: any) {
   const conversation = await ctx.db.get(conversationId);
@@ -20,7 +20,7 @@ export const listConversations = query({
   args: {},
   handler: async (ctx) => {
     const profile = await requireProfile(ctx);
-    const decorate = async (conversation: any) => {
+    const decorate = async (conversation: Doc<'conversations'>) => {
       const studentProfile = await ctx.db.get(conversation.studentProfileId);
       const student = studentProfile ? await ctx.db.get(studentProfile.profileId) : null;
       const admin = conversation.adminProfileId ? await ctx.db.get(conversation.adminProfileId) : null;
@@ -211,6 +211,7 @@ export const attachDocument = mutation({
     if (!message) throw new ConvexError('Message not found.');
     await assertConversationAccess(ctx, profile, message.conversationId);
     assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size);
     if (args.contentType.startsWith('image/') || args.contentType.includes('spreadsheet') || args.contentType.includes('presentation')) {
       throw new ConvexError('Message attachments must be PDF, DOC, DOCX, or TXT documents.');
     }

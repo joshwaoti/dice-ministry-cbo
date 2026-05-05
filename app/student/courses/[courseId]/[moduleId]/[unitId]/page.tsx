@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
+import { sanitizeRichText } from '@/lib/richText';
 
 function canQueryConvexId(id: string) {
   return id.length > 20 && !id.includes('-');
@@ -96,7 +97,7 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
             {activeUnit.richText ? (
               <div
                 className="rich-text-content mb-8 max-w-none"
-                dangerouslySetInnerHTML={{ __html: activeUnit.richText }}
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(activeUnit.richText) }}
               />
             ) : (
               <p className="text-base md:text-lg text-muted mb-8 leading-relaxed text-wrap break-words">

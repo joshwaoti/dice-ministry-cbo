@@ -37,6 +37,7 @@ const documentMimeType = v.union(
 export default defineSchema({
   profiles: defineTable({
     clerkUserId: v.optional(v.string()),
+    clerkTokenIdentifier: v.optional(v.string()),
     email: v.string(),
     name: v.string(),
     role: profileRole,
@@ -50,6 +51,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index('by_clerk_user_id', ['clerkUserId'])
+    .index('by_clerk_token_identifier', ['clerkTokenIdentifier'])
     .index('by_email', ['email'])
     .index('by_role', ['role'])
     .index('by_status', ['status']),
@@ -125,7 +127,9 @@ export default defineSchema({
     size: v.number(),
     category: v.string(),
     uploadedAt: v.number(),
-  }).index('by_application', ['applicationId']),
+  })
+    .index('by_application', ['applicationId'])
+    .index('by_storage_id', ['storageId']),
 
   studentDocuments: defineTable({
     studentProfileId: v.id('studentProfiles'),
@@ -135,7 +139,9 @@ export default defineSchema({
     size: v.number(),
     category: v.string(),
     uploadedAt: v.number(),
-  }).index('by_student', ['studentProfileId']),
+  })
+    .index('by_student', ['studentProfileId'])
+    .index('by_storage_id', ['storageId']),
 
   studentFlags: defineTable({
     studentProfileId: v.id('studentProfiles'),
@@ -168,6 +174,7 @@ export default defineSchema({
     .index('by_category', ['category'])
     .index('by_access', ['access'])
     .index('by_created', ['createdAt'])
+    .index('by_storage_id', ['storageId'])
     .index('by_source_path', ['sourcePath']),
 
   studentInvitationJobs: defineTable({
@@ -253,7 +260,9 @@ export default defineSchema({
     resourceType: v.union(v.literal('inline_pdf'), v.literal('download'), v.literal('image')),
     uploadedBy: v.id('profiles'),
     uploadedAt: v.number(),
-  }).index('by_unit', ['unitId']),
+  })
+    .index('by_unit', ['unitId'])
+    .index('by_storage_id', ['storageId']),
 
   enrollments: defineTable({
     studentProfileId: v.id('studentProfiles'),
@@ -329,7 +338,8 @@ export default defineSchema({
   })
     .index('by_assignment', ['assignmentId'])
     .index('by_student', ['studentProfileId'])
-    .index('by_status', ['status']),
+    .index('by_status', ['status'])
+    .index('by_storage_id', ['storageId']),
 
   submissionComments: defineTable({
     submissionId: v.id('submissions'),
@@ -375,7 +385,9 @@ export default defineSchema({
     contentType: documentMimeType,
     size: v.number(),
     uploadedAt: v.number(),
-  }).index('by_message', ['messageId']),
+  })
+    .index('by_message', ['messageId'])
+    .index('by_storage_id', ['storageId']),
 
   announcements: defineTable({
     title: v.string(),
@@ -390,7 +402,29 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index('by_audience', ['audience'])
-    .index('by_status', ['status']),
+    .index('by_status', ['status'])
+    .index('by_status_and_audience', ['status', 'audience']),
+
+  publicSubmissions: defineTable({
+    type: v.union(v.literal('contact'), v.literal('alumni_story')),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    fullName: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    message: v.string(),
+    cohort: v.optional(v.string()),
+    currentUpdate: v.optional(v.string()),
+    status: v.union(v.literal('new'), v.literal('reviewed'), v.literal('archived')),
+    submittedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_type', ['type'])
+    .index('by_email', ['email'])
+    .index('by_status', ['status'])
+    .index('by_type_and_status', ['type', 'status'])
+    .index('by_submitted_at', ['submittedAt']),
 
   portalSettings: defineTable({
     key: v.string(),

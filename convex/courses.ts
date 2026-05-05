@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { ConvexError, v } from 'convex/values';
 import { mutation, query } from './_generated/server';
-import { canEditCoursework, canPublishCourse, requireAdmin, requireStudent, writeAudit } from './model';
+import { sanitizeRichText } from './richText';
+import { assertDocumentContentType, assertDocumentSize, canEditCoursework, canPublishCourse, requireAdmin, requireStudent, writeAudit } from './model';
 
 function slugify(value: string) {
   return value
@@ -15,7 +15,7 @@ export const listAdmin = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const courses = await ctx.db.query('courses').order('desc').collect();
+    const courses = await ctx.db.query('courses').order('desc').take(100);
     return await Promise.all(
       courses.map(async (course) => {
         const modules = await ctx.db.query('modules').withIndex('by_course_order', (q) => q.eq('courseId', course._id)).collect();
@@ -103,7 +103,7 @@ export const searchCourses = query({
     await requireAdmin(ctx);
     const q = args.query.toLowerCase().trim();
     if (!q) return [];
-    const courses = await ctx.db.query('courses').collect();
+    const courses = await ctx.db.query('courses').take(200);
     const results = courses.filter((c) =>
       c.title.toLowerCase().includes(q) ||
       c.slug.toLowerCase().includes(q) ||
@@ -145,7 +145,7 @@ export const reorderUnits = mutation({
 export const listPublished = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query('courses').withIndex('by_status', (q) => q.eq('status', 'published')).collect();
+  return await ctx.db.query('courses').withIndex('by_status', (q) => q.eq('status', 'published')).take(100);
   },
 });
 
@@ -315,6 +315,10 @@ export const createCourseWithDocuments = mutation({
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx);
     if (!canEditCoursework(actor)) throw new ConvexError('You cannot create courses.');
+    args.contentTypes.forEach((contentType, index) => {
+      assertDocumentContentType(contentType);
+      assertDocumentSize(args.sizes[index]);
+    });
     const now = Date.now();
     const courseId = await ctx.db.insert('courses', {
       title: args.title,
@@ -360,11 +364,12 @@ export const saveUnit = mutation({
     const actor = await requireAdmin(ctx);
     if (!canEditCoursework(actor)) throw new ConvexError('You cannot edit coursework.');
     const now = Date.now();
+    const richText = args.richText ? sanitizeRichText(args.richText) : undefined;
     if (args.unitId) {
       await ctx.db.patch(args.unitId, {
         title: args.title,
         type: args.type,
-        richText: args.richText,
+        richText,
         estimatedMinutes: args.estimatedMinutes,
         order: args.order,
         updatedAt: now,
@@ -377,7 +382,7 @@ export const saveUnit = mutation({
       title: args.title,
       order: args.order,
       type: args.type,
-      richText: args.richText,
+      richText,
       estimatedMinutes: args.estimatedMinutes,
       status: 'draft',
       createdAt: now,
@@ -398,9 +403,8 @@ export const addUnitResource = mutation({
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx);
     if (!canEditCoursework(actor)) throw new ConvexError('You cannot edit coursework.');
-    if (args.contentType.startsWith('video/') || args.contentType.startsWith('audio/')) {
-      throw new ConvexError('Course resources must be document or image files. Video and audio are not supported.');
-    }
+    assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size);
     return await ctx.db.insert('unitResources', {
       unitId: args.unitId,
       storageId: args.storageId,

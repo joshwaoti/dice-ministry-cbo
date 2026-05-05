@@ -69,16 +69,7 @@ export function OurWorkPreview() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className="group relative h-[400px] overflow-hidden rounded-2xl border-l-4 border-transparent text-left shadow-md transition-colors duration-300 hover:border-accent focus-visible:border-accent focus-visible:outline-none"
-                onClick={() => setActiveCard((current) => (current === work.title ? null : work.title))}
                 onTouchStart={() => setActiveCard(work.title)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setActiveCard((current) => (current === work.title ? null : work.title));
-                  }
-                }}
               >
                 <div className="absolute inset-0">
                   <Image
@@ -86,7 +77,7 @@ export function OurWorkPreview() {
                     alt={work.title}
                     fill
                     className={`object-cover transition-all duration-500 ${
-                      isActive ? 'opacity-100 saturate-100' : 'opacity-60 saturate-0 group-hover:opacity-100 group-hover:saturate-100'
+                      isActive ? 'opacity-100 saturate-100' : 'opacity-60 saturate-0 group-hover:opacity-100 group-hover:saturate-100 group-focus-within:opacity-100 group-focus-within:saturate-100'
                     }`}
                   />
                 </div>
@@ -95,7 +86,7 @@ export function OurWorkPreview() {
                   className={`absolute inset-0 bg-gradient-to-t to-transparent transition-colors duration-300 ${
                     isActive
                       ? 'from-primary/95 via-primary/50'
-                      : 'from-primary/90 via-primary/40 group-hover:from-primary/95 group-hover:via-primary/50'
+                      : 'from-primary/90 via-primary/40 group-hover:from-primary/95 group-hover:via-primary/50 group-focus-within:from-primary/95 group-focus-within:via-primary/50'
                   }`}
                 />
 
@@ -106,7 +97,7 @@ export function OurWorkPreview() {
                       className={`flex flex-col items-start gap-4 pt-2 transition-all duration-300 ease-[0.22,1,0.36,1] ${
                         isActive
                           ? 'h-auto translate-y-0 opacity-100'
-                          : 'h-0 translate-y-full opacity-0 group-hover:h-auto group-hover:translate-y-0 group-hover:opacity-100'
+                          : 'h-0 translate-y-full opacity-0 group-hover:h-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:h-auto group-focus-within:translate-y-0 group-focus-within:opacity-100'
                       }`}
                     >
                       <p className="text-white/80">{work.description}</p>

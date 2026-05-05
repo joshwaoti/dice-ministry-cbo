@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { ConvexError, v } from 'convex/values';
+import { Doc } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
-import { assertDocumentContentType, canGrade, requireAdmin, requireStudent, writeAudit } from './model';
+import { assertDocumentContentType, assertDocumentSize, canGrade, requireAdmin, requireStudent, writeAudit } from './model';
 
 export const listForStudent = query({
   args: {},
@@ -38,7 +38,7 @@ export const listSubmissions = query({
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx);
     if (!canGrade(actor)) throw new ConvexError('You cannot review submissions.');
-    const decorate = async (submission: any) => {
+    const decorate = async (submission: Doc<'submissions'>) => {
       const assignment = await ctx.db.get(submission.assignmentId);
       const studentProfile = await ctx.db.get(submission.studentProfileId);
       const profile = studentProfile ? await ctx.db.get(studentProfile.profileId) : null;
@@ -70,6 +70,7 @@ export const submit = mutation({
   handler: async (ctx, args) => {
     const { studentProfile } = await requireStudent(ctx);
     assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size, 25 * 1024 * 1024);
     if (args.contentType.startsWith('image/') || args.contentType.includes('spreadsheet') || args.contentType.includes('presentation')) {
       throw new ConvexError('Assignment submissions must be PDF, DOC, DOCX, or TXT documents.');
     }

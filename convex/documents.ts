@@ -1,12 +1,89 @@
-// @ts-nocheck
-import { v } from 'convex/values';
-import { mutation, query } from './_generated/server';
-import { assertDocumentContentType, requireAdmin, requireProfile, requireStudent } from './model';
+import { ConvexError, v } from 'convex/values';
+import { Doc } from './_generated/dataModel';
+import { mutation, query, QueryCtx } from './_generated/server';
+import { assertDocumentContentType, assertDocumentSize, isAdminRole, requireAdmin, requireProfile, requireStudent } from './model';
+
+async function storageIsKnownToAdmins(ctx: QueryCtx, storageId: string) {
+  const [adminDoc, studentDoc, applicationDoc, submission, attachment, resource] = await Promise.all([
+    ctx.db.query('adminDocuments').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
+    ctx.db.query('studentDocuments').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
+    ctx.db.query('applicationDocuments').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
+    ctx.db.query('submissions').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
+    ctx.db.query('messageAttachments').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
+    ctx.db.query('unitResources').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
+  ]);
+  return Boolean(adminDoc || studentDoc || applicationDoc || submission || attachment || resource);
+}
+
+async function studentCanAccessStorage(ctx: QueryCtx, profile: Doc<'profiles'>, studentProfile: Doc<'studentProfiles'>, storageId: string) {
+  const studentDoc = await ctx.db
+    .query('studentDocuments')
+    .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
+    .first();
+  if (studentDoc?.studentProfileId === studentProfile._id) return true;
+
+  const submission = await ctx.db
+    .query('submissions')
+    .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
+    .first();
+  if (submission?.studentProfileId === studentProfile._id) return true;
+
+  const publicAdminDoc = await ctx.db
+    .query('adminDocuments')
+    .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
+    .first();
+  if (publicAdminDoc?.access === 'students') return true;
+
+  const attachment = await ctx.db
+    .query('messageAttachments')
+    .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
+    .first();
+  if (attachment) {
+    const message = await ctx.db.get(attachment.messageId);
+    const conversation = message ? await ctx.db.get(message.conversationId) : null;
+    if (conversation?.studentProfileId === studentProfile._id) return true;
+  }
+
+  const resource = await ctx.db
+    .query('unitResources')
+    .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
+    .first();
+  if (resource) {
+    const unit = await ctx.db.get(resource.unitId);
+    if (unit) {
+      const enrollment = await ctx.db
+        .query('enrollments')
+        .withIndex('by_student_course', (q) => q.eq('studentProfileId', studentProfile._id).eq('courseId', unit.courseId))
+        .unique();
+      if (enrollment?.status === 'active') return true;
+    }
+  }
+
+  const applicationDoc = await ctx.db
+    .query('applicationDocuments')
+    .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
+    .first();
+  if (applicationDoc) {
+    const application = await ctx.db.get(applicationDoc.applicationId);
+    if (application?.email.toLowerCase() === profile.email.toLowerCase()) return true;
+  }
+
+  return false;
+}
 
 export const getUrl = query({
   args: { storageId: v.id('_storage') },
   handler: async (ctx, args) => {
-    await requireProfile(ctx);
+    const profile = await requireProfile(ctx);
+    if (isAdminRole(profile.role)) {
+      const allowed = await storageIsKnownToAdmins(ctx, args.storageId);
+      if (!allowed) throw new ConvexError('File access denied.');
+      return await ctx.storage.getUrl(args.storageId);
+    }
+    const student = await ctx.db.query('studentProfiles').withIndex('by_profile', (q) => q.eq('profileId', profile._id)).unique();
+    if (!student || !(await studentCanAccessStorage(ctx, profile, student, args.storageId))) {
+      throw new ConvexError('File access denied.');
+    }
     return await ctx.storage.getUrl(args.storageId);
   },
 });
@@ -17,11 +94,13 @@ export const listAdminLibrary = query({
     await requireAdmin(ctx);
     let docs;
     if (args.sourcePath) {
-      docs = await ctx.db.query('adminDocuments').withIndex('by_source_path', (q) => q.eq('sourcePath', args.sourcePath)).collect();
+      const sourcePath = args.sourcePath;
+      docs = await ctx.db.query('adminDocuments').withIndex('by_source_path', (q) => q.eq('sourcePath', sourcePath)).take(200);
     } else if (args.category) {
-      docs = await ctx.db.query('adminDocuments').withIndex('by_category', (q) => q.eq('category', args.category)).collect();
+      const category = args.category;
+      docs = await ctx.db.query('adminDocuments').withIndex('by_category', (q) => q.eq('category', category)).take(200);
     } else {
-      docs = await ctx.db.query('adminDocuments').order('desc').collect();
+      docs = await ctx.db.query('adminDocuments').order('desc').take(200);
     }
     return await Promise.all(docs.map(async (doc) => ({ ...doc, owner: doc.ownerProfileId ? await ctx.db.get(doc.ownerProfileId) : null })));
   },
@@ -31,7 +110,7 @@ export const listDocumentFolders = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const docs = await ctx.db.query('adminDocuments').order('desc').collect();
+    const docs = await ctx.db.query('adminDocuments').order('desc').take(500);
     const folderMap = new Map();
     for (const doc of docs) {
       const folder = doc.sourcePath || doc.category;
@@ -58,6 +137,7 @@ export const createAdminDocument = mutation({
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx);
     if (args.contentType) assertDocumentContentType(args.contentType);
+    if (args.size) assertDocumentSize(args.size);
     return await ctx.db.insert('adminDocuments', {
       ...args,
       contentType: args.contentType as any,
@@ -123,6 +203,7 @@ export const attachApplicationDocument = mutation({
   handler: async (ctx, args) => {
     await requireProfile(ctx);
     assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size);
     return await ctx.db.insert('applicationDocuments', {
       applicationId: args.applicationId,
       storageId: args.storageId,
@@ -146,6 +227,7 @@ export const attachStudentDocument = mutation({
   handler: async (ctx, args) => {
     const { studentProfile } = await requireStudent(ctx);
     assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size);
     return await ctx.db.insert('studentDocuments', {
       studentProfileId: studentProfile._id,
       storageId: args.storageId,
@@ -170,6 +252,7 @@ export const attachStudentDocumentForAdmin = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size);
     return await ctx.db.insert('studentDocuments', {
       studentProfileId: args.studentProfileId,
       storageId: args.storageId,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ConvexError, v } from 'convex/values';
 import { Id } from './_generated/dataModel';
 import { MutationCtx, mutation, query } from './_generated/server';
@@ -137,9 +136,21 @@ export const submitApplication = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const email = normalizeEmail(args.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ConvexError('Enter a valid email address.');
+    if (!args.fullName.trim() || !args.phone.trim()) throw new ConvexError('Name and phone are required.');
+    const recent = await ctx.db.query('applications').withIndex('by_email', (q) => q.eq('email', email)).order('desc').take(5);
+    if (recent.some((application) => application.submittedAt > now - 10 * 60 * 1000)) {
+      throw new ConvexError('A recent application already exists for this email. Please wait before submitting again.');
+    }
     return await ctx.db.insert('applications', {
       ...args,
-      email: normalizeEmail(args.email),
+      fullName: args.fullName.trim().slice(0, 160),
+      email,
+      phone: args.phone.trim().slice(0, 40),
+      motivation: args.motivation?.trim().slice(0, 3000),
+      hopes: args.hopes?.trim().slice(0, 3000),
+      referralSource: args.referralSource?.trim().slice(0, 200),
       status: 'new',
       submittedAt: now,
       updatedAt: now,
@@ -154,9 +165,9 @@ export const list = query({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, ['super_admin', 'admin']);
     if (args.status) {
-      return await ctx.db.query('applications').withIndex('by_status', (q) => q.eq('status', args.status!)).collect();
+      return await ctx.db.query('applications').withIndex('by_status', (q) => q.eq('status', args.status!)).take(200);
     }
-    return await ctx.db.query('applications').order('desc').collect();
+    return await ctx.db.query('applications').order('desc').take(200);
   },
 });
 

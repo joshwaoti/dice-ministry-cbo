@@ -150,6 +150,40 @@
   .text-muted {
     color: var(--muted-foreground) !important;
   }
+
+  .dice-spinner-orbit {
+    animation: dice-spinner-orbit 0.95s cubic-bezier(0.55, 0, 0.45, 1) infinite;
+  }
+
+  @keyframes dice-spinner-orbit {
+    0% {
+      opacity: 0.65;
+      transform: rotate(0deg) scale(0.92);
+    }
+    50% {
+      opacity: 1;
+      transform: rotate(180deg) scale(1);
+    }
+    100% {
+      opacity: 0.65;
+      transform: rotate(360deg) scale(0.92);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dice-spinner-orbit {
+      animation: dice-spinner-pulse 1.8s ease-in-out infinite;
+    }
+  }
+
+  @keyframes dice-spinner-pulse {
+    0%, 100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 }
 
 @layer components {

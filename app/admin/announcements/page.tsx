@@ -33,6 +33,7 @@ export default function AdminAnnouncementsPage() {
     liveAnnouncements?.map((announcement) => ({
       id: announcement._id,
       title: announcement.title,
+      body: announcement.body,
       audience: announcement.audience,
       channel: announcement.audience === 'all' ? 'Banner + Portal' : 'Portal notification',
       status: announcement.status === 'sent' ? 'Sent' : announcement.status === 'scheduled' ? 'Scheduled' : 'Draft',
@@ -109,7 +110,7 @@ export default function AdminAnnouncementsPage() {
                 <Button
                   variant="outline"
                   onClick={async () => {
-                    await createAnnouncement({ title: `${announcement.title} Copy`, body: 'Duplicated announcement body. Edit before sending.', audience: announcement.audience as any, scheduledAt: Date.now() + 24 * 60 * 60 * 1000 });
+                    await createAnnouncement({ title: `${announcement.title} Copy`, body: announcement.body, audience: announcement.audience as any, scheduledAt: Date.now() + 24 * 60 * 60 * 1000 });
                     toast({ title: 'Announcement duplicated', description: 'A scheduled copy has been created for editing.', tone: 'success' });
                   }}
                 >
@@ -197,7 +198,7 @@ export default function AdminAnnouncementsPage() {
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary" onClick={handleCreate}>
-              <Sparkles className="mr-2 h-4 w-4" /> Save Draft
+              <Sparkles className="mr-2 h-4 w-4" /> Save Announcement
             </Button>
           </div>
         </div>

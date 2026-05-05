@@ -1,16 +1,33 @@
-// @ts-nocheck
 import { v } from 'convex/values';
+import { Doc } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 import { requireAdmin, requireProfile } from './model';
+
+function latestFirst(a: Doc<'announcements'>, b: Doc<'announcements'>) {
+  return (b.sentAt ?? b.updatedAt ?? b.createdAt) - (a.sentAt ?? a.updatedAt ?? a.createdAt);
+}
 
 export const listVisible = query({
   args: {},
   handler: async (ctx) => {
     const profile = await requireProfile(ctx);
-    if (profile.role === 'student') {
-      return await ctx.db.query('announcements').withIndex('by_audience', (q) => q.eq('audience', 'students')).collect();
-    }
-    return await ctx.db.query('announcements').withIndex('by_audience', (q) => q.eq('audience', 'admins')).collect();
+    const audience = profile.role === 'student' ? 'students' : 'admins';
+    const [targeted, global] = await Promise.all([
+      ctx.db.query('announcements').withIndex('by_status_and_audience', (q) => q.eq('status', 'sent').eq('audience', audience)).take(50),
+      ctx.db.query('announcements').withIndex('by_status_and_audience', (q) => q.eq('status', 'sent').eq('audience', 'all')).take(50),
+    ]);
+    return [...targeted, ...global].sort(latestFirst).slice(0, 50);
+  },
+});
+
+export const listPublicBanner = query({
+  args: {},
+  handler: async (ctx) => {
+    const sentPublic = await ctx.db
+      .query('announcements')
+      .withIndex('by_status_and_audience', (q) => q.eq('status', 'sent').eq('audience', 'all'))
+      .take(20);
+    return sentPublic.sort(latestFirst)[0] ?? null;
   },
 });
 
@@ -18,7 +35,7 @@ export const listAdmin = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    return await ctx.db.query('announcements').order('desc').collect();
+    return await ctx.db.query('announcements').order('desc').take(200);
   },
 });
 
@@ -33,10 +50,15 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx, ['super_admin', 'admin']);
     const now = Date.now();
+    const status = args.scheduledAt ? 'scheduled' : 'sent';
     return await ctx.db.insert('announcements', {
-      ...args,
-      status: args.scheduledAt ? 'scheduled' : 'sent',
-      sentAt: args.scheduledAt ? undefined : now,
+      title: args.title.trim(),
+      body: args.body.trim(),
+      audience: args.audience,
+      cohortId: args.audience === 'cohort' ? args.cohortId : undefined,
+      scheduledAt: args.scheduledAt,
+      status,
+      sentAt: status === 'sent' ? now : undefined,
       createdBy: actor._id,
       createdAt: now,
       updatedAt: now,
@@ -55,15 +77,18 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, ['super_admin', 'admin']);
-    await ctx.db.patch(args.announcementId, {
-      title: args.title,
-      body: args.body,
-      audience: args.audience,
-      status: args.status,
-      scheduledAt: args.scheduledAt,
-      sentAt: args.status === 'sent' ? Date.now() : undefined,
-      updatedAt: Date.now(),
-    });
+    const existing = await ctx.db.get(args.announcementId);
+    const now = Date.now();
+    const patch: Partial<Doc<'announcements'>> = { updatedAt: now };
+    if (args.title !== undefined) patch.title = args.title.trim();
+    if (args.body !== undefined) patch.body = args.body.trim();
+    if (args.audience !== undefined) patch.audience = args.audience;
+    if (args.scheduledAt !== undefined) patch.scheduledAt = args.scheduledAt;
+    if (args.status !== undefined) {
+      patch.status = args.status;
+      if (args.status === 'sent') patch.sentAt = existing?.sentAt ?? now;
+    }
+    await ctx.db.patch(args.announcementId, patch);
   },
 });
 

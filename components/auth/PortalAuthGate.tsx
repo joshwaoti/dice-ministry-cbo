@@ -4,6 +4,7 @@ import { ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 type PortalKind = 'admin' | 'student';
 
@@ -28,7 +29,7 @@ export function PortalAuthGate({ kind, children }: { kind: PortalKind; children:
   if (profile === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface text-primary">
-        Loading portal...
+        <LoadingSpinner label="Loading portal..." />
       </div>
     );
   }
@@ -36,7 +37,7 @@ export function PortalAuthGate({ kind, children }: { kind: PortalKind; children:
   if (!profile || profile.status !== 'active') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface text-primary">
-        Checking access...
+        <LoadingSpinner label="Checking access..." />
       </div>
     );
   }

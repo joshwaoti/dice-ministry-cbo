@@ -1,8 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { UploadCloud, FileText, ShieldCheck } from 'lucide-react';
+import { UploadCloud, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { formatUploadLimit, isAllowedUpload, MAX_UPLOAD_BYTES } from '@/lib/uploadRules';
 
 export function UploadDropzone({
   title,
@@ -38,8 +40,12 @@ export function UploadDropzone({
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
-          toast({ title: 'Unsupported file type', description: 'Only document and image files are allowed in the portal.', tone: 'warning' });
+        if (!isAllowedUpload(file)) {
+          toast({ title: 'Unsupported file type', description: 'Only PDF, Word, text, spreadsheet, presentation, JPG, and PNG files are allowed.', tone: 'warning' });
+          continue;
+        }
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast({ title: 'File too large', description: `Uploads are limited to ${formatUploadLimit()} per file.`, tone: 'warning' });
           continue;
         }
         const uploadUrl = await generateUploadUrl();
@@ -80,9 +86,7 @@ export function UploadDropzone({
               <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1">
                 <FileText className="h-3.5 w-3.5" /> {accepted}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Virus scanned on upload
-              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1">Max {formatUploadLimit()} per file</span>
             </div>
           </div>
         </div>
@@ -92,7 +96,7 @@ export function UploadDropzone({
           onClick={() => inputRef.current?.click()}
           className="w-full rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent/90 md:w-auto"
         >
-          {uploading ? 'Uploading...' : 'Choose Files'}
+          {uploading ? <LoadingSpinner label="Uploading..." className="justify-center text-white" /> : 'Choose Files'}
         </button>
         <input
           ref={inputRef}

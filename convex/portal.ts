@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { query } from './_generated/server';
 import { requireAdmin, requireStudent } from './model';
 
@@ -7,13 +6,13 @@ export const adminDashboard = query({
   handler: async (ctx) => {
     const actor = await requireAdmin(ctx);
     const [students, courses, submissions, applications, conversations, announcements, enrollments] = await Promise.all([
-      ctx.db.query('studentProfiles').collect(),
-      ctx.db.query('courses').collect(),
-      ctx.db.query('submissions').collect(),
-      ctx.db.query('applications').collect(),
-      ctx.db.query('conversations').collect(),
-      ctx.db.query('announcements').collect(),
-      ctx.db.query('enrollments').collect(),
+      ctx.db.query('studentProfiles').take(500),
+      ctx.db.query('courses').take(200),
+      ctx.db.query('submissions').take(500),
+      ctx.db.query('applications').take(500),
+      ctx.db.query('conversations').take(500),
+      ctx.db.query('announcements').take(200),
+      ctx.db.query('enrollments').take(1000),
     ]);
     const pendingSubmissions = submissions.filter((submission) => submission.status === 'pending_review').length;
     const activeCourses = courses.filter((course) => course.status === 'published').length;

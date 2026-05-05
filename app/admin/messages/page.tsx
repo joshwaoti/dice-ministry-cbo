@@ -20,7 +20,9 @@ export default function AdminMessagesPage() {
   const { toast } = useToast();
   const profile = useQuery(api.profiles.current, {}) as any | null | undefined;
   const liveConversations = useQuery(api.messages.listConversations, {}) as any[] | undefined;
+  const publicSubmissions = useQuery(api.publicSubmissions.listAdmin, { status: 'new' }) as any[] | undefined;
   const sendMessage = useMutation(api.messages.send);
+  const updatePublicSubmissionStatus = useMutation(api.publicSubmissions.updateStatus);
   const editMessage = useMutation(api.messages.edit);
   const markRead = useMutation(api.messages.markRead);
   const attachDocument = useMutation(api.messages.attachDocument);
@@ -80,6 +82,40 @@ export default function AdminMessagesPage() {
         title="Communication Center"
         description="Manage student communication, message ownership, attachments, edits, and read states from live Convex data."
       />
+
+      <section className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold text-primary">Public Inquiries</h2>
+            <p className="text-sm text-muted-foreground">New contact messages and alumni stories submitted from the public site.</p>
+          </div>
+          <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-accent">{publicSubmissions?.length ?? 0} new</span>
+        </div>
+        {publicSubmissions === undefined ? <LoadingPortalState label="Loading public inquiries..." /> : null}
+        {publicSubmissions !== undefined && publicSubmissions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No new public submissions.</p>
+        ) : null}
+        <div className="grid gap-3 md:grid-cols-2">
+          {publicSubmissions?.slice(0, 4).map((submission) => (
+            <article key={submission._id} className="rounded-2xl border border-border bg-surface p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">{submission.type === 'contact' ? 'Contact' : 'Alumni Story'}</p>
+                  <h3 className="mt-1 font-semibold text-primary">{submission.fullName}</h3>
+                  <p className="text-sm text-muted-foreground">{submission.email}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  await updatePublicSubmissionStatus({ submissionId: submission._id as any, status: 'reviewed' });
+                  toast({ title: 'Marked reviewed', tone: 'success' });
+                }}>
+                  Review
+                </Button>
+              </div>
+              <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{submission.message}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="grid overflow-hidden rounded-2xl border border-border bg-white shadow-sm lg:grid-cols-[340px_1fr]">
         <aside className="border-r border-border">

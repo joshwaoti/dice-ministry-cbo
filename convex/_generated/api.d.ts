@@ -21,6 +21,8 @@ import type * as messages from "../messages.js";
 import type * as model from "../model.js";
 import type * as portal from "../portal.js";
 import type * as profiles from "../profiles.js";
+import type * as publicSubmissions from "../publicSubmissions.js";
+import type * as richText from "../richText.js";
 import type * as settings from "../settings.js";
 import type * as students from "../students.js";
 
@@ -44,6 +46,8 @@ declare const fullApi: ApiFromModules<{
   model: typeof model;
   portal: typeof portal;
   profiles: typeof profiles;
+  publicSubmissions: typeof publicSubmissions;
+  richText: typeof richText;
   settings: typeof settings;
   students: typeof students;
 }>;

@@ -26,6 +26,8 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
+import { isSafeRichTextUrl, sanitizeRichText } from '@/lib/richText';
+import { useToast } from '@/components/ui/toast';
 
 interface ToolbarButtonProps {
   onClick: () => void;
@@ -66,6 +68,7 @@ interface RichTextEditorProps {
 export function RichTextEditor({ content, onChange, placeholder, className }: RichTextEditorProps) {
   const [linkUrl, setLinkUrl] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
+  const { toast } = useToast();
 
   const editor = useEditor({
     extensions: [
@@ -77,12 +80,14 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
       Underline,
       Link.configure({
         openOnClick: false,
+        protocols: ['http', 'https', 'mailto', 'tel'],
+        isAllowedUri: (url) => isSafeRichTextUrl(url, 'link'),
       }),
       Image,
     ],
     content,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      onChange(sanitizeRichText(editor.getHTML()));
     },
     editorProps: {
       attributes: {
@@ -101,21 +106,29 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
   const addLink = useCallback(() => {
     if (!editor) return;
     if (showLinkInput && linkUrl) {
+      if (!isSafeRichTextUrl(linkUrl, 'link')) {
+        toast({ title: 'Unsafe link blocked', description: 'Use http, https, mailto, tel, or a relative page link.', tone: 'warning' });
+        return;
+      }
       editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
       setLinkUrl('');
       setShowLinkInput(false);
     } else {
       setShowLinkInput(true);
     }
-  }, [editor, linkUrl, showLinkInput]);
+  }, [editor, linkUrl, showLinkInput, toast]);
 
   const addImage = useCallback(() => {
     if (!editor) return;
     const url = window.prompt('Enter image URL:');
     if (url) {
+      if (!isSafeRichTextUrl(url, 'image')) {
+        toast({ title: 'Unsafe image blocked', description: 'Use an http, https, relative, or image data URL.', tone: 'warning' });
+        return;
+      }
       editor.chain().focus().setImage({ src: url }).run();
     }
-  }, [editor]);
+  }, [editor, toast]);
 
   if (!editor) {
     return <div className="h-[200px] bg-gray-50 rounded-xl animate-pulse" />;
