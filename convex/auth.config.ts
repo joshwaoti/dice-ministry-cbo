@@ -4,6 +4,10 @@ const authConfig = {
       domain: process.env.CLERK_ISSUER_URL,
       applicationID: 'convex',
     },
+    {
+      domain: 'https://clerk.diceministry.org',
+      applicationID: 'convex',
+    },
   ],
 };
 
