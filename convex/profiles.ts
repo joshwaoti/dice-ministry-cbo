@@ -17,7 +17,13 @@ function getDisplayName(data: any) {
 export const current = query({
   args: {},
   handler: async (ctx) => {
-    const profile = await getCurrentProfile(ctx);
+    let profile;
+    try {
+      profile = await getCurrentProfile(ctx);
+    } catch (error) {
+      console.error('Failed to get current profile:', error);
+      return null;
+    }
     if (!profile) return null;
     return {
       _id: profile._id,
@@ -48,7 +54,13 @@ export const bootstrapSuperAdmin = mutation({
     email: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
+    let identity;
+    try {
+      identity = await ctx.auth.getUserIdentity();
+    } catch (error) {
+      console.error('Bootstrap identity failure:', error);
+      throw new ConvexError('Authentication configuration error. Check server logs.');
+    }
     if (!identity) throw new ConvexError('Sign in with Clerk before bootstrapping the first super admin.');
     const identityEmail = normalizeEmail(identity.email ?? '');
     if (!identityEmail || identityEmail !== normalizeEmail(args.email)) {
@@ -93,7 +105,14 @@ export const completeFirstLogin = mutation({
   handler: async (ctx) => {
     const profile = await getCurrentProfile(ctx);
     if (!profile) throw new ConvexError('Profile not found.');
-    const identity = await ctx.auth.getUserIdentity();
+    let identity;
+    try {
+      identity = await ctx.auth.getUserIdentity();
+    } catch (error) {
+      console.error('First login identity failure:', error);
+      // Fallback to existing profile token if identity fails but profile exists
+      identity = null;
+    }
     const tokenPatch = identity && profile.clerkTokenIdentifier !== identity.tokenIdentifier
       ? { clerkTokenIdentifier: identity.tokenIdentifier }
       : {};
@@ -108,7 +127,13 @@ export const completeFirstLogin = mutation({
 export const claimSignedInProfile = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    let identity;
+    try {
+      identity = await ctx.auth.getUserIdentity();
+    } catch (error) {
+      console.error('Claim profile identity failure:', error);
+      throw new ConvexError('Authentication failed due to server configuration.');
+    }
     if (!identity) throw new ConvexError('Sign in with Clerk before claiming a DICE profile.');
     const email = normalizeEmail(identity.email ?? '');
     if (!email) throw new ConvexError('Your Clerk account does not have a primary email address.');
@@ -181,7 +206,13 @@ export const updateSelf = mutation({
   handler: async (ctx, args) => {
     const profile = await getCurrentProfile(ctx);
     if (!profile) throw new ConvexError('Profile not found.');
-    const identity = await ctx.auth.getUserIdentity();
+    let identity;
+    try {
+      identity = await ctx.auth.getUserIdentity();
+    } catch (error) {
+      console.error('Update self identity failure:', error);
+      identity = null;
+    }
     await ctx.db.patch(profile._id, {
       name: args.name?.trim() || profile.name,
       phone: args.phone,
