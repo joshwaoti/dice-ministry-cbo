@@ -15,8 +15,26 @@ const FIRST_SUPER_ADMIN_NAME = 'Joshua Otieno';
 export default function PostLoginPage() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const { signOut, session } = useClerk();
   const profile = useQuery(api.profiles.current);
+
+  useEffect(() => {
+    if (session) {
+      session.getToken({ template: 'convex' }).then((token) => {
+        if (token) {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            try {
+              const payload = JSON.parse(atob(parts[1]));
+              console.log('Clerk JWT Payload:', payload);
+            } catch (e) {
+              console.error('Failed to decode JWT payload', e);
+            }
+          }
+        }
+      });
+    }
+  }, [session]);
   const bootstrapSuperAdmin = useMutation(api.profiles.bootstrapSuperAdmin);
   const claimSignedInProfile = useMutation(api.profiles.claimSignedInProfile);
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();

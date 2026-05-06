@@ -28,7 +28,10 @@ export async function getCurrentProfile(ctx: QueryCtx | MutationCtx) {
   try {
     identity = await ctx.auth.getUserIdentity();
   } catch (error) {
-    console.error('Authentication configuration error:', error);
+    // This handles cases where the JWT issuer/audience is misconfigured
+    // but the query is called. We return null to allow the UI to handle
+    // the unauthenticated state gracefully.
+    console.error('Authentication check failed:', error);
     return null;
   }
   if (!identity) return null;
