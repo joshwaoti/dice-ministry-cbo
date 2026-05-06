@@ -43,7 +43,12 @@ export const avatarUrl = query({
   args: { storageId: v.optional(v.id('_storage')) },
   handler: async (ctx, args) => {
     if (!args.storageId) return null;
-    await getCurrentProfile(ctx);
+    try {
+      await getCurrentProfile(ctx);
+    } catch (error) {
+      console.error('Avatar URL profile check failure:', error);
+      return null;
+    }
     return await ctx.storage.getUrl(args.storageId);
   },
 });

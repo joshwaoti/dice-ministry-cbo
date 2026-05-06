@@ -38,7 +38,13 @@ export async function getCurrentProfile(ctx: QueryCtx | MutationCtx) {
 }
 
 export async function requireProfile(ctx: QueryCtx | MutationCtx) {
-  const profile = await getCurrentProfile(ctx);
+  let profile;
+  try {
+    profile = await getCurrentProfile(ctx);
+  } catch (error) {
+    console.error('requireProfile identity failure:', error);
+    profile = null;
+  }
   if (!profile) throw new ConvexError('Authenticated user does not have a DICE profile.');
   if (profile.status !== 'active') throw new ConvexError('Profile is not active.');
   return profile;
