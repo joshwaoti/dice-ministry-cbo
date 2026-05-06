@@ -201,7 +201,8 @@ export const syncFromClerkWebhook = mutation({
     data: v.any(),
   },
   handler: async (ctx, args) => {
-    if (!process.env.CLERK_WEBHOOK_SYNC_SECRET || args.syncSecret !== process.env.CLERK_WEBHOOK_SYNC_SECRET) {
+    const expectedSecret = process.env.CLERK_WEBHOOK_SYNC_SECRET ?? process.env.CLERK_WEBHOOK_SECRET;
+    if (!expectedSecret || args.syncSecret !== expectedSecret) {
       throw new ConvexError('Invalid webhook sync secret.');
     }
 

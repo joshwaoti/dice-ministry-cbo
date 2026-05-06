@@ -134,6 +134,7 @@ export default function LoginPage() {
                   elements: {
                     cardBox: 'shadow-none border border-border rounded-2xl',
                     card: 'shadow-none',
+                    footerAction: 'hidden',
                     headerTitle: 'hidden',
                     headerSubtitle: 'hidden',
                     socialButtonsBlockButton: 'rounded-xl',

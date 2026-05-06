@@ -4,9 +4,10 @@ import { NextRequest } from 'next/server';
 import { api } from '@/convex/_generated/api';
 
 export async function POST(req: NextRequest) {
-  const event = await verifyWebhook(req);
+  const signingSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET ?? process.env.CLERK_WEBHOOK_SECRET;
+  const event = await verifyWebhook(req, signingSecret ? { signingSecret } : undefined);
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  const syncSecret = process.env.CLERK_WEBHOOK_SYNC_SECRET;
+  const syncSecret = process.env.CLERK_WEBHOOK_SYNC_SECRET ?? process.env.CLERK_WEBHOOK_SECRET;
 
   if (!convexUrl || !syncSecret) {
     return Response.json({ error: 'Missing Convex webhook configuration' }, { status: 500 });

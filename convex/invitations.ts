@@ -7,6 +7,12 @@ import { requireAdmin, writeAudit } from './model';
 
 const MAX_BATCH_SIZE = 20;
 
+function appBaseUrl() {
+  const raw = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProtocol.replace(/\/$/, '');
+}
+
 export const listJobs = query({
   args: {
     status: v.optional(
@@ -109,7 +115,7 @@ export const processQueue = action({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<{ processed: number; stoppedForRateLimit: boolean }> => {
     const secretKey = process.env.CLERK_SECRET_KEY;
-    const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = appBaseUrl();
     if (!secretKey) throw new ConvexError('CLERK_SECRET_KEY is required to process invitation jobs.');
 
     const limit = Math.min(args.limit ?? MAX_BATCH_SIZE, MAX_BATCH_SIZE);
@@ -127,7 +133,7 @@ export const processQueue = action({
         },
         body: JSON.stringify({
           email_address: job.email,
-          redirect_url: `${appUrl.replace(/\/$/, '')}/accept-invitation`,
+          redirect_url: `${appUrl}/accept-invitation`,
           notify: true,
           ignore_existing: true,
           public_metadata: {

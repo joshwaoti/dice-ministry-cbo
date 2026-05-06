@@ -4,6 +4,12 @@ import { internal } from './_generated/api';
 import { action, internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { canSeeAdmin, normalizeEmail, requireAdmin, writeAudit } from './model';
 
+function appBaseUrl() {
+  const raw = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProtocol.replace(/\/$/, '');
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -165,7 +171,7 @@ export const inviteAdmin = action({
       role: args.role,
     });
     const secretKey = process.env.CLERK_SECRET_KEY;
-    const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = appBaseUrl();
     if (!secretKey) throw new ConvexError('CLERK_SECRET_KEY is required to invite admin users.');
 
     const invitation = await createClerkInvitation({ secretKey, appUrl, email: authorization.email, role: args.role });
@@ -183,7 +189,7 @@ export const resendAdminInvite = action({
   handler: async (ctx, args) => {
     const authorization = await ctx.runQuery(internal.adminUsers.authorizeResendAdminInvite, args);
     const secretKey = process.env.CLERK_SECRET_KEY;
-    const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = appBaseUrl();
     if (!secretKey) throw new ConvexError('CLERK_SECRET_KEY is required to invite admin users.');
     const invitation = await createClerkInvitation({
       secretKey,
