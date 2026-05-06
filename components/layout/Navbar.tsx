@@ -19,7 +19,11 @@ export function Navbar() {
   const isHome = pathname === '/';
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 80);
     };

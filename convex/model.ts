@@ -24,7 +24,13 @@ export async function getProfileByClerkTokenIdentifier(ctx: QueryCtx | MutationC
 }
 
 export async function getCurrentProfile(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
+  let identity;
+  try {
+    identity = await ctx.auth.getUserIdentity();
+  } catch (error) {
+    console.error('Authentication configuration error:', error);
+    return null;
+  }
   if (!identity) return null;
   const profile = await getProfileByClerkTokenIdentifier(ctx, identity.tokenIdentifier);
   if (profile) return profile;
