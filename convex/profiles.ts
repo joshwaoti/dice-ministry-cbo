@@ -3,6 +3,8 @@ import { internal } from './_generated/api';
 import { action, internalMutation, mutation, query } from './_generated/server';
 import { getCurrentProfile, getProfileByClerkTokenIdentifier, normalizeEmail, writeAudit } from './model';
 
+const FIRST_SUPER_ADMIN_EMAIL = 'joshwaotieno643@gmail.com';
+
 function getPrimaryEmail(data: any) {
   const primaryId = data.primary_email_address_id;
   const emails = data.email_addresses ?? [];
@@ -13,6 +15,10 @@ function getPrimaryEmail(data: any) {
 function getDisplayName(data: any) {
   const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
   return fullName || data.username || getPrimaryEmail(data);
+}
+
+function studentCodeFromClerkUser(clerkUserId: string) {
+  return `STU-${clerkUserId.slice(-6).toUpperCase()}`;
 }
 
 export const current = query({
@@ -231,6 +237,42 @@ export const updateSelf = mutation({
   },
 });
 
+export const syncSignedInClerkUser = action({
+  args: {},
+  handler: async (ctx): Promise<string | null> => {
+    let identity;
+    try {
+      identity = await ctx.auth.getUserIdentity();
+    } catch (error) {
+      console.error('Signed-in Clerk sync identity failure:', error);
+      throw new ConvexError('Authentication failed due to server configuration.');
+    }
+    if (!identity) throw new ConvexError('Sign in with Clerk before syncing a DICE profile.');
+
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    if (!secretKey) throw new ConvexError('CLERK_SECRET_KEY is required to sync Clerk users.');
+
+    const response = await fetch(`https://api.clerk.com/v1/users/${identity.subject}`, {
+      headers: { Authorization: `Bearer ${secretKey}` },
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new ConvexError(`Clerk user lookup failed: ${body.slice(0, 500)}`);
+    }
+
+    const data = await response.json();
+    const result: { ok: boolean; profileId?: string; skipped?: string } = await ctx.runMutation(
+      internal.profiles.applyClerkUserSync,
+      {
+        eventType: 'signed_in_user.sync',
+        data,
+        clerkTokenIdentifier: identity.tokenIdentifier,
+      },
+    );
+    return result.profileId ?? null;
+  },
+});
+
 export const syncFromClerkWebhook = action({
   args: {
     syncSecret: v.string(),
@@ -247,7 +289,7 @@ export const syncFromClerkWebhook = action({
       ok: boolean;
       profileId?: string;
       skipped?: string;
-    } = await ctx.runMutation(internal.profiles.applyClerkWebhookSync, {
+    } = await ctx.runMutation(internal.profiles.applyClerkUserSync, {
       eventType: args.eventType,
       data: args.data,
     });
@@ -255,16 +297,17 @@ export const syncFromClerkWebhook = action({
   },
 });
 
-export const applyClerkWebhookSync = internalMutation({
+export const applyClerkUserSync = internalMutation({
   args: {
     eventType: v.string(),
     data: v.any(),
+    clerkTokenIdentifier: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const clerkUserId = args.data.id as string | undefined;
     if (!clerkUserId) return { ok: true };
 
-    if (args.eventType === 'user.deleted') {
+    if (args.eventType === 'user.deleted' || args.data.deleted || args.data.object === 'deleted_object') {
       const existing = await ctx.db
         .query('profiles')
         .withIndex('by_clerk_user_id', (q) => q.eq('clerkUserId', clerkUserId))
@@ -284,11 +327,18 @@ export const applyClerkWebhookSync = internalMutation({
       .query('profiles')
       .withIndex('by_clerk_user_id', (q) => q.eq('clerkUserId', clerkUserId))
       .unique();
+    const byToken = args.clerkTokenIdentifier
+      ? await ctx.db
+          .query('profiles')
+          .withIndex('by_clerk_token_identifier', (q) => q.eq('clerkTokenIdentifier', args.clerkTokenIdentifier))
+          .unique()
+      : null;
     const byEmail = await ctx.db.query('profiles').withIndex('by_email', (q) => q.eq('email', email)).unique();
-    const profile = byClerkId ?? byEmail;
+    const profile = byToken ?? byClerkId ?? byEmail;
 
     if (profile) {
       const patch: any = { clerkUserId, email, name, updatedAt: now };
+      if (args.clerkTokenIdentifier) patch.clerkTokenIdentifier = args.clerkTokenIdentifier;
       if (profile.status === 'pending_invite') patch.status = 'active';
       await ctx.db.patch(profile._id, patch);
 
@@ -317,6 +367,41 @@ export const applyClerkWebhookSync = internalMutation({
       return { ok: true, profileId: profile._id };
     }
 
+    if (email === FIRST_SUPER_ADMIN_EMAIL) {
+      const existingProfiles = await ctx.db.query('profiles').take(1);
+      if (existingProfiles.length > 0) {
+        return { ok: true, skipped: 'First super admin email signed in after profiles already exist.' };
+      }
+      const profileId = await ctx.db.insert('profiles', {
+        clerkUserId,
+        clerkTokenIdentifier: args.clerkTokenIdentifier,
+        email,
+        name,
+        role: 'super_admin',
+        status: 'active',
+        firstLoginAt: now,
+        lastActiveAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert('adminProfiles', {
+        profileId,
+        role: 'super_admin',
+        title: 'Super Admin',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await writeAudit(ctx, {
+        actorProfileId: profileId,
+        action: 'profiles.sync_first_super_admin',
+        targetTable: 'profiles',
+        targetId: profileId,
+        summary: `Synced ${email} as the first super admin from Clerk sign-in.`,
+      });
+      return { ok: true, profileId };
+    }
+
     const metadataRole = args.data.public_metadata?.role;
     if (metadataRole !== 'student') {
       return { ok: true, skipped: 'No pre-approved profile exists for this non-student Clerk user.' };
@@ -324,11 +409,21 @@ export const applyClerkWebhookSync = internalMutation({
 
     const profileId = await ctx.db.insert('profiles', {
       clerkUserId,
+      clerkTokenIdentifier: args.clerkTokenIdentifier,
       email,
       name,
       role: 'student',
       status: 'active',
       firstLoginAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert('studentProfiles', {
+      profileId,
+      studentCode: studentCodeFromClerkUser(clerkUserId),
+      programTrack: 'Ignite',
+      enrollmentStatus: 'active',
+      progressPercent: 0,
       createdAt: now,
       updatedAt: now,
     });

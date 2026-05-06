@@ -7,19 +7,20 @@ const clerkSources = [
   'https://*.clerk.accounts.dev',
   'https://clerk.diceministry.org',
 ].join(' ');
+const vercelLiveSource = 'https://vercel.live';
 
 export default clerkMiddleware(async (auth, req) => {
   const response = NextResponse.next();
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${clerkSources} https://challenges.cloudflare.com`,
-    `script-src-elem 'self' 'unsafe-inline' ${clerkSources} https://challenges.cloudflare.com`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${clerkSources} ${vercelLiveSource} https://challenges.cloudflare.com`,
+    `script-src-elem 'self' 'unsafe-inline' ${clerkSources} ${vercelLiveSource} https://challenges.cloudflare.com`,
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${clerkSources} https://clerk-telemetry.com`,
+    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${clerkSources} ${vercelLiveSource} https://clerk-telemetry.com`,
     `frame-src ${clerkSources} https://challenges.cloudflare.com`,
     "media-src 'self' blob:",
     "object-src 'none'",

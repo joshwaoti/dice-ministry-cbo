@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useClerk, useUser } from '@clerk/nextjs';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 
@@ -41,6 +41,7 @@ export default function PostLoginPage() {
   }, [session]);
   const bootstrapSuperAdmin = useMutation(api.profiles.bootstrapSuperAdmin);
   const claimSignedInProfile = useMutation(api.profiles.claimSignedInProfile);
+  const syncSignedInClerkUser = useAction(api.profiles.syncSignedInClerkUser);
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   const displayName = user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? FIRST_SUPER_ADMIN_NAME;
   const claimInFlight = useRef(false);
@@ -50,6 +51,20 @@ export default function PostLoginPage() {
   useEffect(() => {
     if (profile === undefined || !isLoaded) return;
     if (!profile) {
+      if (!claimAttempted.current && !claimInFlight.current) {
+        claimInFlight.current = true;
+        syncSignedInClerkUser().then((profileId) => {
+          claimAttempted.current = true;
+          if (!profileId && email !== FIRST_SUPER_ADMIN_EMAIL) setClaimDenied(true);
+        }).catch((error) => {
+          console.error('Failed to sync signed-in Clerk user', error);
+          claimAttempted.current = true;
+          setClaimDenied(true);
+        }).finally(() => {
+          claimInFlight.current = false;
+        });
+        return;
+      }
       if (email === FIRST_SUPER_ADMIN_EMAIL) {
         if (claimInFlight.current) return;
         claimInFlight.current = true;
@@ -83,7 +98,7 @@ export default function PostLoginPage() {
       return;
     }
     router.replace('/admin/dashboard');
-  }, [bootstrapSuperAdmin, claimSignedInProfile, displayName, email, isLoaded, profile, router]);
+  }, [bootstrapSuperAdmin, claimSignedInProfile, displayName, email, isLoaded, profile, router, syncSignedInClerkUser]);
 
   const isUnapprovedAccount = isLoaded && profile === null && email !== FIRST_SUPER_ADMIN_EMAIL && claimDenied;
 

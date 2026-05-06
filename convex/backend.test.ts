@@ -100,7 +100,7 @@ describe('auth profile lookup', () => {
 
   test('applies Clerk student webhook data in the internal DB mutation', async () => {
     const t = testBackend();
-    const result = await t.mutation(internal.profiles.applyClerkWebhookSync, {
+    const result = await t.mutation(internal.profiles.applyClerkUserSync, {
       eventType: 'user.created',
       data: {
         id: 'user_webhook_student',
@@ -122,6 +122,13 @@ describe('auth profile lookup', () => {
     expect(profile?.email).toBe('webhook.student@example.com');
     expect(profile?.role).toBe('student');
     expect(profile?.status).toBe('active');
+    const studentProfile = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('studentProfiles')
+        .withIndex('by_profile', (q) => q.eq('profileId', profile!._id))
+        .unique();
+    });
+    expect(studentProfile?.enrollmentStatus).toBe('active');
   });
 });
 
