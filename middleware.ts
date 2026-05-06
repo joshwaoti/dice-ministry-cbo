@@ -21,7 +21,7 @@ export default clerkMiddleware(async (auth, req) => {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
     `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${clerkSources} ${vercelLiveSource} https://clerk-telemetry.com`,
-    `frame-src ${clerkSources} https://challenges.cloudflare.com`,
+    `frame-src ${clerkSources} ${vercelLiveSource} https://challenges.cloudflare.com`,
     "media-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",

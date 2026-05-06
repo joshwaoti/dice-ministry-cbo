@@ -21,6 +21,10 @@ function studentCodeFromClerkUser(clerkUserId: string) {
   return `STU-${clerkUserId.slice(-6).toUpperCase()}`;
 }
 
+function isFirstSuperAdminEmail(email: string) {
+  return normalizeEmail(email) === FIRST_SUPER_ADMIN_EMAIL;
+}
+
 export const current = query({
   args: {},
   handler: async (ctx) => {
@@ -340,9 +344,44 @@ export const applyClerkUserSync = internalMutation({
       const patch: any = { clerkUserId, email, name, updatedAt: now };
       if (args.clerkTokenIdentifier) patch.clerkTokenIdentifier = args.clerkTokenIdentifier;
       if (profile.status === 'pending_invite') patch.status = 'active';
+      if (isFirstSuperAdminEmail(email)) {
+        patch.role = 'super_admin';
+        patch.status = 'active';
+        patch.firstLoginAt = profile.firstLoginAt ?? now;
+        patch.lastActiveAt = now;
+      }
       await ctx.db.patch(profile._id, patch);
 
-      if (profile.role === 'student') {
+      if (isFirstSuperAdminEmail(email)) {
+        const adminProfile = await ctx.db
+          .query('adminProfiles')
+          .withIndex('by_profile', (q) => q.eq('profileId', profile._id))
+          .unique();
+        if (adminProfile) {
+          await ctx.db.patch(adminProfile._id, {
+            role: 'super_admin',
+            title: adminProfile.title ?? 'Super Admin',
+            status: 'active',
+            updatedAt: now,
+          });
+        } else {
+          await ctx.db.insert('adminProfiles', {
+            profileId: profile._id,
+            role: 'super_admin',
+            title: 'Super Admin',
+            status: 'active',
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+        await writeAudit(ctx, {
+          actorProfileId: profile._id,
+          action: 'profiles.ensure_first_super_admin',
+          targetTable: 'profiles',
+          targetId: profile._id,
+          summary: `Ensured ${email} is the configured super admin.`,
+        });
+      } else if (profile.role === 'student') {
         const student = await ctx.db
           .query('studentProfiles')
           .withIndex('by_profile', (q) => q.eq('profileId', profile._id))
@@ -367,11 +406,7 @@ export const applyClerkUserSync = internalMutation({
       return { ok: true, profileId: profile._id };
     }
 
-    if (email === FIRST_SUPER_ADMIN_EMAIL) {
-      const existingProfiles = await ctx.db.query('profiles').take(1);
-      if (existingProfiles.length > 0) {
-        return { ok: true, skipped: 'First super admin email signed in after profiles already exist.' };
-      }
+    if (isFirstSuperAdminEmail(email)) {
       const profileId = await ctx.db.insert('profiles', {
         clerkUserId,
         clerkTokenIdentifier: args.clerkTokenIdentifier,

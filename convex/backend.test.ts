@@ -130,6 +130,82 @@ describe('auth profile lookup', () => {
     });
     expect(studentProfile?.enrollmentStatus).toBe('active');
   });
+
+  test('syncs configured founder email as super admin even when other profiles exist', async () => {
+    const t = testBackend();
+    await seedProfile(t, 'student');
+    const result = await t.mutation(internal.profiles.applyClerkUserSync, {
+      eventType: 'signed_in_user.sync',
+      clerkTokenIdentifier: 'https://clerk.diceministry.org|user_founder',
+      data: {
+        id: 'user_founder',
+        first_name: 'Joshua',
+        last_name: 'Otieno',
+        primary_email_address_id: 'email_founder',
+        email_addresses: [{ id: 'email_founder', email_address: 'joshwaotieno643@gmail.com' }],
+        public_metadata: { role: 'admin' },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const profile = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('profiles')
+        .withIndex('by_email', (q) => q.eq('email', 'joshwaotieno643@gmail.com'))
+        .unique();
+    });
+    expect(profile?.role).toBe('super_admin');
+    expect(profile?.status).toBe('active');
+    const adminProfile = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('adminProfiles')
+        .withIndex('by_profile', (q) => q.eq('profileId', profile!._id))
+        .unique();
+    });
+    expect(adminProfile?.role).toBe('super_admin');
+    expect(adminProfile?.status).toBe('active');
+  });
+
+  test('upgrades existing configured founder profile to super admin on sync', async () => {
+    const t = testBackend();
+    const profileId = await t.run(async (ctx) => {
+      const now = Date.now();
+      return await ctx.db.insert('profiles', {
+        clerkUserId: 'user_founder',
+        email: 'joshwaotieno643@gmail.com',
+        name: 'Joshua',
+        role: 'admin',
+        status: 'pending_invite',
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const result = await t.mutation(internal.profiles.applyClerkUserSync, {
+      eventType: 'signed_in_user.sync',
+      clerkTokenIdentifier: 'https://clerk.diceministry.org|user_founder',
+      data: {
+        id: 'user_founder',
+        first_name: 'Joshua',
+        last_name: 'Otieno',
+        primary_email_address_id: 'email_founder',
+        email_addresses: [{ id: 'email_founder', email_address: 'joshwaotieno643@gmail.com' }],
+        public_metadata: { role: 'admin' },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const profile = await t.run(async (ctx) => await ctx.db.get(profileId));
+    expect(profile?.role).toBe('super_admin');
+    expect(profile?.status).toBe('active');
+    const adminProfile = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('adminProfiles')
+        .withIndex('by_profile', (q) => q.eq('profileId', profileId))
+        .unique();
+    });
+    expect(adminProfile?.role).toBe('super_admin');
+  });
 });
 
 describe('announcements', () => {
