@@ -20,6 +20,11 @@ const authConfig = {
       domain: 'https://clerk.diceministry.org/',
       applicationID: 'convex',
     },
+    {
+      // Support for potential trailing slash in issuer claim with domain as audience
+      domain: 'https://clerk.diceministry.org/',
+      applicationID: 'clerk.diceministry.org',
+    },
     // Dynamic provider based on environment variables
     ...(process.env.CLERK_ISSUER_URL || process.env.CLERK_JWT_ISSUER_DOMAIN
       ? [
@@ -28,6 +33,20 @@ const authConfig = {
               .trim()
               .replace(/^(?!https?:\/\/)/, 'https://')
               .replace(/\/$/, ''),
+            applicationID: 'convex',
+          },
+          {
+            domain: (process.env.CLERK_ISSUER_URL || process.env.CLERK_JWT_ISSUER_DOMAIN)!
+              .trim()
+              .replace(/^(?!https?:\/\/)/, 'https://')
+              .replace(/\/$/, ''),
+            applicationID: 'clerk.diceministry.org',
+          },
+          {
+            domain: (process.env.CLERK_ISSUER_URL || process.env.CLERK_JWT_ISSUER_DOMAIN)!
+              .trim()
+              .replace(/^(?!https?:\/\/)/, 'https://')
+              .replace(/\/$/, '') + '/',
             applicationID: 'convex',
           },
         ]

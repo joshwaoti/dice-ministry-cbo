@@ -127,7 +127,7 @@ export default function LoginPage() {
             <div className="clerk-login-shell">
               <SignIn
                 routing="hash"
-                withSignUp={false}
+                withSignUp={true}
                 fallbackRedirectUrl="/post-login"
                 forceRedirectUrl="/post-login"
                 appearance={{

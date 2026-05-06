@@ -18,6 +18,8 @@ export default function PostLoginPage() {
   const { signOut, session } = useClerk();
   const profile = useQuery(api.profiles.current);
 
+  const [jwtClaims, setJwtClaims] = useState<{ iss?: string; aud?: string } | null>(null);
+
   useEffect(() => {
     if (session) {
       session.getToken({ template: 'convex' }).then((token) => {
@@ -27,6 +29,7 @@ export default function PostLoginPage() {
             try {
               const payload = JSON.parse(atob(parts[1]));
               console.log('Clerk JWT Payload:', payload);
+              setJwtClaims({ iss: payload.iss, aud: payload.aud });
             } catch (e) {
               console.error('Failed to decode JWT payload', e);
             }
@@ -81,6 +84,7 @@ export default function PostLoginPage() {
   }, [bootstrapSuperAdmin, claimSignedInProfile, email, isLoaded, profile, router]);
 
   const isUnapprovedAccount = isLoaded && profile === null && email !== FIRST_SUPER_ADMIN_EMAIL && claimDenied;
+  const isAuthError = isLoaded && profile === undefined && session;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center">
@@ -94,13 +98,23 @@ export default function PostLoginPage() {
           />
         </div>
         <h1 className="font-display text-2xl font-bold text-primary">
-          {isUnapprovedAccount ? 'No approved portal account found' : 'Opening your portal...'}
+          {isAuthError ? 'Authentication issue' : isUnapprovedAccount ? 'No approved portal account found' : 'Opening your portal...'}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {isUnapprovedAccount
+          {isAuthError
+            ? 'We are having trouble connecting your account to our backend database.'
+            : isUnapprovedAccount
             ? 'Students must apply for Ignite and be approved before signing in. Admin users must accept the invitation sent from the admin portal.'
             : 'We are checking your DICE profile and sending you to the right dashboard.'}
         </p>
+        {isAuthError && jwtClaims && (
+          <div className="mt-4 rounded-lg bg-red-50 p-4 text-left text-xs font-mono text-red-800 border border-red-200">
+            <p className="font-bold mb-1">Diagnostic Info:</p>
+            <p>Issuer: {jwtClaims.iss}</p>
+            <p>Audience: {jwtClaims.aud}</p>
+            <p className="mt-2 italic text-[10px]">Please provide this info to the developer.</p>
+          </div>
+        )}
         {isUnapprovedAccount ? (
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild variant="primary">
