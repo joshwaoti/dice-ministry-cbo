@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const client = new ConvexHttpClient(convexUrl);
-  await client.mutation(api.profiles.syncFromClerkWebhook, {
+  await client.action(api.profiles.syncFromClerkWebhook, {
     syncSecret,
     eventType: event.type,
     data: event.data as any,

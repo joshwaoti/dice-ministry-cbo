@@ -1,5 +1,6 @@
 import { ConvexError, v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { internal } from './_generated/api';
+import { action, internalMutation, mutation, query } from './_generated/server';
 import { getCurrentProfile, getProfileByClerkTokenIdentifier, normalizeEmail, writeAudit } from './model';
 
 function getPrimaryEmail(data: any) {
@@ -230,7 +231,7 @@ export const updateSelf = mutation({
   },
 });
 
-export const syncFromClerkWebhook = mutation({
+export const syncFromClerkWebhook = action({
   args: {
     syncSecret: v.string(),
     eventType: v.string(),
@@ -242,6 +243,24 @@ export const syncFromClerkWebhook = mutation({
       throw new ConvexError('Invalid webhook sync secret.');
     }
 
+    const result: {
+      ok: boolean;
+      profileId?: string;
+      skipped?: string;
+    } = await ctx.runMutation(internal.profiles.applyClerkWebhookSync, {
+      eventType: args.eventType,
+      data: args.data,
+    });
+    return result;
+  },
+});
+
+export const applyClerkWebhookSync = internalMutation({
+  args: {
+    eventType: v.string(),
+    data: v.any(),
+  },
+  handler: async (ctx, args) => {
     const clerkUserId = args.data.id as string | undefined;
     if (!clerkUserId) return { ok: true };
 

@@ -12,6 +12,14 @@ import { Button } from '@/components/ui/button';
 const FIRST_SUPER_ADMIN_EMAIL = 'joshwaotieno643@gmail.com';
 const FIRST_SUPER_ADMIN_NAME = 'Joshua Otieno';
 
+function decodeJwtPayload(token: string) {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return JSON.parse(atob(padded));
+}
+
 export default function PostLoginPage() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
@@ -19,17 +27,13 @@ export default function PostLoginPage() {
   const profile = useQuery(api.profiles.current);
 
   useEffect(() => {
-    if (session) {
+    if (process.env.NODE_ENV === 'development' && session) {
       session.getToken({ template: 'convex' }).then((token) => {
         if (token) {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            try {
-              const payload = JSON.parse(atob(parts[1]));
-              console.log('Clerk JWT Payload:', payload);
-            } catch (e) {
-              console.error('Failed to decode JWT payload', e);
-            }
+          try {
+            console.log('Clerk JWT Payload:', decodeJwtPayload(token));
+          } catch (e) {
+            console.error('Failed to decode JWT payload', e);
           }
         }
       });
@@ -38,6 +42,7 @@ export default function PostLoginPage() {
   const bootstrapSuperAdmin = useMutation(api.profiles.bootstrapSuperAdmin);
   const claimSignedInProfile = useMutation(api.profiles.claimSignedInProfile);
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+  const displayName = user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? FIRST_SUPER_ADMIN_NAME;
   const claimInFlight = useRef(false);
   const claimAttempted = useRef(false);
   const [claimDenied, setClaimDenied] = useState(false);
@@ -48,7 +53,7 @@ export default function PostLoginPage() {
       if (email === FIRST_SUPER_ADMIN_EMAIL) {
         if (claimInFlight.current) return;
         claimInFlight.current = true;
-        bootstrapSuperAdmin({ email: FIRST_SUPER_ADMIN_EMAIL, name: FIRST_SUPER_ADMIN_NAME }).catch((error) => {
+        bootstrapSuperAdmin({ email: FIRST_SUPER_ADMIN_EMAIL, name: displayName }).catch((error) => {
           console.error('Failed to bootstrap first super admin', error);
         }).finally(() => {
           claimInFlight.current = false;
@@ -78,7 +83,7 @@ export default function PostLoginPage() {
       return;
     }
     router.replace('/admin/dashboard');
-  }, [bootstrapSuperAdmin, claimSignedInProfile, email, isLoaded, profile, router]);
+  }, [bootstrapSuperAdmin, claimSignedInProfile, displayName, email, isLoaded, profile, router]);
 
   const isUnapprovedAccount = isLoaded && profile === null && email !== FIRST_SUPER_ADMIN_EMAIL && claimDenied;
 

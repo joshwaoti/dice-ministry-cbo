@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'vitest';
 import { convexTest } from 'convex-test';
 import schema from './schema';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import { Doc, Id } from './_generated/dataModel';
 
 const modules = import.meta.glob('./**/*.ts');
@@ -55,6 +55,27 @@ function testBackend() {
 }
 
 describe('auth profile lookup', () => {
+  test('bootstraps the signed-in first user as super admin', async () => {
+    const t = testBackend();
+    const firstAdminEmail = 'joshwaotieno643@gmail.com';
+    const firstAdminIdentity = {
+      subject: 'user_first_super_admin',
+      tokenIdentifier: 'https://clerk.diceministry.org|user_first_super_admin',
+      email: firstAdminEmail,
+      name: 'Joshua Wandhawa',
+    };
+
+    const profileId = await t.withIdentity(firstAdminIdentity).mutation(api.profiles.bootstrapSuperAdmin, {
+      email: firstAdminEmail,
+      name: firstAdminIdentity.name,
+    });
+    const current = await t.withIdentity(firstAdminIdentity).query(api.profiles.current, {});
+
+    expect(current?._id).toBe(profileId);
+    expect(current?.role).toBe('super_admin');
+    expect(current?.status).toBe('active');
+  });
+
   test('prefers tokenIdentifier and falls back to legacy Clerk subject', async () => {
     const t = testBackend();
     await seedProfile(t, 'admin');
@@ -75,6 +96,32 @@ describe('auth profile lookup', () => {
     });
     const legacy = await t.withIdentity({ subject: 'legacy-only', tokenIdentifier: 'https://clerk.test|new-token', email: 'legacy@example.com' }).query(api.profiles.current, {});
     expect(legacy?.email).toBe('legacy@example.com');
+  });
+
+  test('applies Clerk student webhook data in the internal DB mutation', async () => {
+    const t = testBackend();
+    const result = await t.mutation(internal.profiles.applyClerkWebhookSync, {
+      eventType: 'user.created',
+      data: {
+        id: 'user_webhook_student',
+        first_name: 'Webhook',
+        last_name: 'Student',
+        primary_email_address_id: 'email_primary',
+        email_addresses: [{ id: 'email_primary', email_address: 'Webhook.Student@Example.com' }],
+        public_metadata: { role: 'student' },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const profile = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('profiles')
+        .withIndex('by_clerk_user_id', (q) => q.eq('clerkUserId', 'user_webhook_student'))
+        .unique();
+    });
+    expect(profile?.email).toBe('webhook.student@example.com');
+    expect(profile?.role).toBe('student');
+    expect(profile?.status).toBe('active');
   });
 });
 
