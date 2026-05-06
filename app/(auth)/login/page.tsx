@@ -8,12 +8,13 @@ import { GraduationCap, ShieldCheck } from 'lucide-react';
 import { RotatingTestimonials } from '@/components/ui/RotatingTestimonials';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
+import { testimonials } from '@/components/home/testimonials';
 
-const MOCK_QUOTES = [
-  { quote: 'The curriculum challenged me to grow in ways I never expected.', author: 'Daisy W.', cohort: 'SURGE 2024' },
-  { quote: 'I found my purpose and a lifelong community of believers.', author: 'Mark O.', cohort: 'Ignite 2023' },
-  { quote: "This is more than a course; it's a spiritual awakening.", author: 'Sarah M.', cohort: 'SURGE 2024' },
-];
+const LOGIN_QUOTES = testimonials.map(({ punchline, author, cohort }) => ({
+  quote: punchline,
+  author,
+  cohort,
+}));
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function LoginPage() {
             <h1 className="font-display text-5xl font-bold leading-tight text-white">DICE Ministry Portal</h1>
             <p className="mt-5 text-base leading-7 text-white/78">Students enter only after approved Ignite admission. Admins and moderators enter through invited staff accounts.</p>
           </div>
-          <RotatingTestimonials quotes={MOCK_QUOTES} interval={5000} />
+          <RotatingTestimonials quotes={LOGIN_QUOTES} interval={5000} />
         </div>
 
         <div className="relative z-10 p-6">
@@ -128,6 +129,8 @@ export default function LoginPage() {
               <SignIn
                 routing="hash"
                 withSignUp={false}
+                transferable={false}
+                signUpUrl="/login"
                 fallbackRedirectUrl="/post-login"
                 forceRedirectUrl="/post-login"
                 appearance={{
@@ -135,6 +138,7 @@ export default function LoginPage() {
                     cardBox: 'shadow-none border border-border rounded-2xl',
                     card: 'shadow-none',
                     footerAction: 'hidden',
+                    footerActionLink: 'hidden',
                     headerTitle: 'hidden',
                     headerSubtitle: 'hidden',
                     socialButtonsBlockButton: 'rounded-xl',
