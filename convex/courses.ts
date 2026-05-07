@@ -1,5 +1,6 @@
 import { ConvexError, v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { Doc } from './_generated/dataModel';
+import { mutation, query, QueryCtx } from './_generated/server';
 import { sanitizeRichText } from './richText';
 import { assertDocumentContentType, assertDocumentSize, canEditCoursework, canPublishCourse, requireAdmin, requireStudent, writeAudit } from './model';
 
@@ -9,6 +10,27 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+function courseDocumentPath(course: Pick<Doc<'courses'>, 'title'>) {
+  return `Courses/${course.title}/Course Documents`;
+}
+
+async function listCourseDocuments(ctx: QueryCtx, course: Doc<'courses'>) {
+  const docsByCategory = await ctx.db
+    .query('adminDocuments')
+    .withIndex('by_category', (q) => q.eq('category', `Course: ${course.title}`))
+    .take(100);
+  const docsByPath = await ctx.db
+    .query('adminDocuments')
+    .withIndex('by_source_path', (q) => q.eq('sourcePath', courseDocumentPath(course)))
+    .take(100);
+  const docs = new Map([...docsByCategory, ...docsByPath].map((doc) => [doc._id, doc]));
+  return Array.from(docs.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+async function listUnitResources(ctx: QueryCtx, unitId: Doc<'units'>['_id']) {
+  return await ctx.db.query('unitResources').withIndex('by_unit', (q) => q.eq('unitId', unitId)).take(100);
 }
 
 export const listAdmin = query({
@@ -179,6 +201,8 @@ export const update = mutation({
     const actor = await requireAdmin(ctx);
     if (!canEditCoursework(actor)) throw new ConvexError('You cannot update courses.');
     if (args.status === 'published' && !canPublishCourse(actor)) throw new ConvexError('You cannot publish courses.');
+    const existingCourse = await ctx.db.get(args.courseId);
+    if (!existingCourse) throw new ConvexError('Course not found.');
     await ctx.db.patch(args.courseId, {
       title: args.title,
       slug: args.title ? slugify(args.title) : undefined,
@@ -187,6 +211,22 @@ export const update = mutation({
       updatedBy: actor._id,
       updatedAt: Date.now(),
     });
+    if (args.title && args.title !== existingCourse.title) {
+      const oldCategory = `Course: ${existingCourse.title}`;
+      const oldPath = courseDocumentPath(existingCourse);
+      const [docsByCategory, docsByPath] = await Promise.all([
+        ctx.db.query('adminDocuments').withIndex('by_category', (q) => q.eq('category', oldCategory)).take(100),
+        ctx.db.query('adminDocuments').withIndex('by_source_path', (q) => q.eq('sourcePath', oldPath)).take(100),
+      ]);
+      const docs = new Map([...docsByCategory, ...docsByPath].map((doc) => [doc._id, doc]));
+      for (const doc of docs.values()) {
+        await ctx.db.patch(doc._id, {
+          category: `Course: ${args.title}`,
+          sourcePath: courseDocumentPath({ title: args.title }),
+          updatedAt: Date.now(),
+        });
+      }
+    }
   },
 });
 
@@ -288,10 +328,13 @@ export const getAdminCourse = query({
     const modulesWithUnits = await Promise.all(
       modules.map(async (courseModule) => ({
         ...courseModule,
-        units: await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', courseModule._id)).collect(),
+        units: await Promise.all((await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', courseModule._id)).collect()).map(async (unit) => ({
+          ...unit,
+          resources: await listUnitResources(ctx, unit._id),
+        }))),
       })),
     );
-    return { ...course, modules: modulesWithUnits };
+    return { ...course, courseDocuments: await listCourseDocuments(ctx, course), modules: modulesWithUnits };
   },
 });
 
@@ -334,11 +377,12 @@ export const createCourseWithDocuments = mutation({
       await ctx.db.insert('adminDocuments', {
         name: args.fileNames[i],
         category: `Course: ${args.title}`,
-        access: 'instructors',
+        access: 'students',
         storageId: args.storageIds[i],
         fileName: args.fileNames[i],
         contentType: args.contentTypes[i] as any,
         size: args.sizes[i],
+        sourcePath: courseDocumentPath({ title: args.title }),
         createdBy: actor._id,
         ownerProfileId: actor._id,
         createdAt: now,
@@ -428,8 +472,11 @@ export const publish = mutation({
     for (const courseModule of modules) {
       const units = await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', courseModule._id)).collect();
       if (units.length === 0) throw new ConvexError(`Module "${courseModule.title}" needs at least one unit.`);
-      if (units.some((unit) => !unit.richText && unit.type === 'text')) {
-        throw new ConvexError(`Module "${courseModule.title}" has an empty text unit.`);
+      for (const unit of units) {
+        const resources = await ctx.db.query('unitResources').withIndex('by_unit', (q) => q.eq('unitId', unit._id)).take(1);
+        if (!unit.richText && unit.type === 'text' && resources.length === 0) {
+          throw new ConvexError(`Module "${courseModule.title}" has an empty text unit.`);
+        }
       }
     }
     await ctx.db.patch(args.courseId, {
@@ -471,14 +518,18 @@ export const getStudentCourse = query({
       .unique();
     if (!enrollment) throw new ConvexError('You are not enrolled in this course.');
     const course = await ctx.db.get(args.courseId);
+    if (!course) return null;
     const modules = await ctx.db.query('modules').withIndex('by_course_order', (q) => q.eq('courseId', args.courseId)).collect();
     const modulesWithUnits = await Promise.all(
       modules.map(async (courseModule) => ({
         ...courseModule,
-        units: await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', courseModule._id)).collect(),
+        units: await Promise.all((await ctx.db.query('units').withIndex('by_module_order', (q) => q.eq('moduleId', courseModule._id)).collect()).map(async (unit) => ({
+          ...unit,
+          resources: await listUnitResources(ctx, unit._id),
+        }))),
       })),
     );
-    return { ...course, enrollment, modules: modulesWithUnits };
+    return { ...course, enrollment, courseDocuments: await listCourseDocuments(ctx, course), modules: modulesWithUnits };
   },
 });
 

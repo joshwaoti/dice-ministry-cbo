@@ -89,6 +89,7 @@ export default function AdminDocumentsPage() {
         helper={`Uploading to: ${uploadCategory}`}
         generateUploadUrl={generateUploadUrl}
         multiple
+        showSuccessToast={false}
         onUploaded={async (file) => {
           await createDocument({
             name: file.fileName,
@@ -184,7 +185,7 @@ export default function AdminDocumentsPage() {
                           <FileText className="h-5 w-5 text-accent shrink-0" />
                           <div>
                             <p className="font-semibold text-primary truncate max-w-[200px]">{document.fileName || document.name}</p>
-                            <p className="text-xs text-muted-foreground">{document.size ? `${(document.size / 1024).toFixed(1)} KB` : 'No file'}</p>
+                            <p className="text-xs text-muted-foreground">{document.size ? `${(document.size / 1024).toFixed(1)} KB` : 'No file'}{document.sourceTable && document.sourceTable !== 'adminDocuments' ? ` - ${document.sourceTable}` : ''}</p>
                           </div>
                         </div>
                       </td>
@@ -193,19 +194,23 @@ export default function AdminDocumentsPage() {
                       <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(document.updatedAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(document.name); setEditCategory(document.category); }}>Edit</Button>
+                          {document.sourceTable === 'adminDocuments' ? (
+                            <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(document.name); setEditCategory(document.category); }}>Edit</Button>
+                          ) : null}
                           <DocumentDownloadButton storageId={document.storageId} />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              await removeDocument({ documentId: document._id as any });
-                              toast({ title: 'Document removed', description: `${document.name} was removed.`, tone: 'warning' });
-                            }}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {document.sourceTable === 'adminDocuments' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                await removeDocument({ documentId: document._id as any });
+                                toast({ title: 'Document removed', description: `${document.name} was removed.`, tone: 'warning' });
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -224,9 +229,13 @@ export default function AdminDocumentsPage() {
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(document.name); setEditCategory(document.category); }}>Edit</Button>
+                    {document.sourceTable === 'adminDocuments' ? (
+                      <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(document.name); setEditCategory(document.category); }}>Edit</Button>
+                    ) : null}
                     <DocumentDownloadButton storageId={document.storageId} />
-                    <Button size="sm" variant="outline" onClick={async () => { await removeDocument({ documentId: document._id as any }); toast({ title: 'Removed', tone: 'warning' }); }}>Delete</Button>
+                    {document.sourceTable === 'adminDocuments' ? (
+                      <Button size="sm" variant="outline" onClick={async () => { await removeDocument({ documentId: document._id as any }); toast({ title: 'Removed', tone: 'warning' }); }}>Delete</Button>
+                    ) : null}
                   </div>
                 </article>
               ))}

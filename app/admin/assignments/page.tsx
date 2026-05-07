@@ -226,6 +226,7 @@ export default function AdminAssignmentsPage() {
                   accepted="PDF or DOCX up to 10MB"
                   accept=".pdf,.doc,.docx,.txt"
                   generateUploadUrl={generateUploadUrl}
+                  showSuccessToast={false}
                   onUploaded={async (file) => {
                     await createAdminDocument({
                       name: `${selected.learner.name} - ${file.fileName}`,

@@ -291,6 +291,92 @@ describe('rich text and uploads', () => {
       size: 30 * 1024 * 1024,
     })).rejects.toThrow();
   });
+
+  test('surfaces course resources and assignment submissions in document folders', async () => {
+    const t = testBackend();
+    const { profileId: adminProfileId } = await seedProfile(t, 'admin');
+    const { studentProfileId } = await seedProfile(t, 'student');
+    const admin = t.withIdentity(adminIdentity);
+    const student = t.withIdentity(studentIdentity);
+
+    const [courseFileId, unitFileId, submissionFileId] = await t.run(async (ctx) => {
+      return await Promise.all([
+        ctx.storage.store(new Blob(['course handbook'], { type: 'application/pdf' })),
+        ctx.storage.store(new Blob(['unit worksheet'], { type: 'application/pdf' })),
+        ctx.storage.store(new Blob(['student work'], { type: 'application/pdf' })),
+      ]);
+    });
+
+    const courseId = await admin.mutation(api.courses.createCourseWithDocuments, {
+      title: 'Visible Documents',
+      synopsis: 'Course files must be visible.',
+      storageIds: [courseFileId],
+      fileNames: ['course-handbook.pdf'],
+      contentTypes: ['application/pdf'],
+      sizes: [1024],
+    });
+    const moduleId = await admin.mutation(api.courses.createModule, { courseId, title: 'Foundations' });
+    const unitId = await admin.mutation(api.courses.saveUnit, {
+      courseId,
+      moduleId,
+      title: 'Opening Lesson',
+      type: 'text',
+      order: 0,
+      richText: '<p>Read the worksheet.</p>',
+    });
+    await admin.mutation(api.courses.addUnitResource, {
+      unitId,
+      storageId: unitFileId,
+      fileName: 'unit-worksheet.pdf',
+      contentType: 'application/pdf',
+      size: 2048,
+      resourceType: 'inline_pdf',
+    });
+
+    const assignmentId = await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert('enrollments', {
+        studentProfileId: studentProfileId!,
+        courseId,
+        assignedBy: adminProfileId,
+        status: 'active',
+        progressPercent: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return await ctx.db.insert('assignments', {
+        unitId,
+        courseId,
+        title: 'Reflection Upload',
+        instructions: 'Upload a reflection.',
+        allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
+        maxFileSizeMB: 20,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    await student.mutation(api.assignments.submit, {
+      assignmentId,
+      storageId: submissionFileId,
+      fileName: 'student-reflection.pdf',
+      contentType: 'application/pdf',
+      size: 4096,
+    });
+
+    const studentCourse = await student.query(api.courses.getStudentCourse, { courseId });
+    expect(studentCourse?.courseDocuments.map((doc) => doc.fileName)).toContain('course-handbook.pdf');
+    expect(studentCourse?.modules[0].units[0].resources.map((doc) => doc.fileName)).toContain('unit-worksheet.pdf');
+
+    const folders = await admin.query(api.documents.listDocumentFolders, {});
+    expect(folders.map((folder) => folder.sourcePath)).toContain('Courses/Visible Documents/Course Documents');
+    expect(folders.map((folder) => folder.sourcePath)).toContain('Courses/Visible Documents/Foundations/Opening Lesson/Resources');
+    expect(folders.map((folder) => folder.sourcePath)).toContain('Student Assignments/Student User/Visible Documents/Reflection Upload');
+
+    const courseDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Courses/Visible Documents/Course Documents' });
+    expect(courseDocs.map((doc) => doc.fileName)).toContain('course-handbook.pdf');
+    const submissionDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Student Assignments/Student User/Visible Documents/Reflection Upload' });
+    expect(submissionDocs[0].name).toContain('Student User - Reflection Upload - student-reflection.pdf');
+  });
 });
 
 describe('public submissions', () => {

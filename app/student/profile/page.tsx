@@ -58,6 +58,7 @@ export default function StudentProfile() {
             accepted="JPG, PNG"
             accept=".jpg,.jpeg,.png"
             generateUploadUrl={generateUploadUrl}
+            showSuccessToast={false}
             onUploaded={async (file) => {
               if (!file.contentType.startsWith('image/')) {
                 toast({ title: 'Image required', description: 'Profile photos must be JPG or PNG files.', tone: 'warning' });

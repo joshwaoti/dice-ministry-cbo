@@ -174,6 +174,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             title="Attach student document"
             description="Upload admissions notes, result slips, consent forms, and support documents."
             accepted="PDF, DOCX, TXT, JPG, PNG"
+            showSuccessToast={false}
             onUploaded={async (file) => {
               await attachStudentDocument({
                 studentProfileId: liveStudent._id,

@@ -3,6 +3,7 @@
 import { use } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
+import { Download, FileText } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -33,6 +34,7 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
             title: unit.title,
             type: unit.type === 'assignment' ? 'Assignment' : 'Reading',
             richText: unit.richText,
+            resources: unit.resources ?? [],
           })),
         })),
       }
@@ -112,6 +114,26 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
               </p>
             </div>
 
+            {activeUnit.resources.length > 0 ? (
+              <div className="mb-8 rounded-[22px] border border-border bg-white p-5">
+                <h2 className="font-display text-xl font-bold text-primary">Unit Documents</h2>
+                <div className="mt-4 space-y-3">
+                  {activeUnit.resources.map((resource: any) => (
+                    <div key={resource._id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <FileText className="h-5 w-5 shrink-0 text-accent" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-primary">{resource.fileName}</p>
+                          <p className="text-xs text-muted-foreground">{resource.size ? `${(resource.size / 1024).toFixed(1)} KB` : 'Document'}</p>
+                        </div>
+                      </div>
+                      <StudentDocumentButton storageId={resource.storageId} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {course.modules.length === 0 ? (
               <EmptyPortalState variant="learning" title="No learning content yet" description="Published document lessons will appear here after the course team adds them." />
             ) : (
@@ -138,5 +160,21 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
         </div>
       </div>
     </div>
+  );
+}
+
+function StudentDocumentButton({ storageId }: { storageId?: string }) {
+  const url = useQuery(api.documents.getUrl, storageId ? { storageId: storageId as any } : 'skip') as string | null | undefined;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!url}
+      onClick={() => {
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }}
+    >
+      <Download className="mr-2 h-4 w-4" /> Open
+    </Button>
   );
 }

@@ -3,6 +3,53 @@ import { Doc } from './_generated/dataModel';
 import { mutation, query, QueryCtx } from './_generated/server';
 import { assertDocumentContentType, assertDocumentSize, isAdminRole, requireAdmin, requireProfile, requireStudent } from './model';
 
+type LibraryDocument = {
+  _id: string;
+  name: string;
+  category: string;
+  access: 'admin_only' | 'instructors' | 'admin_team' | 'students';
+  storageId?: string;
+  fileName?: string;
+  contentType?: string;
+  size?: number;
+  sourcePath?: string;
+  createdBy?: string;
+  ownerProfileId?: string;
+  createdAt: number;
+  updatedAt: number;
+  sourceTable: string;
+  sourceId: string;
+  owner?: Doc<'profiles'> | null;
+};
+
+function courseFolder(course: Doc<'courses'> | null, rest = 'Course Documents') {
+  return `Courses/${course?.title ?? 'Unknown Course'}/${rest}`;
+}
+
+function normalizeFolderPath(path: string) {
+  return path.trim().replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+}
+
+function matchesFolder(doc: LibraryDocument, folder?: string) {
+  if (!folder) return true;
+  const normalized = normalizeFolderPath(folder);
+  return normalizeFolderPath(doc.sourcePath ?? '') === normalized || normalizeFolderPath(doc.category) === normalized;
+}
+
+async function courseForAdminDocument(ctx: QueryCtx, doc: Doc<'adminDocuments'>) {
+  if (doc.category.startsWith('Course: ')) {
+    const title = doc.category.slice('Course: '.length).trim();
+    const courses = await ctx.db.query('courses').take(200);
+    return courses.find((course) => course.title === title) ?? null;
+  }
+  if (doc.sourcePath?.startsWith('Courses/')) {
+    const title = doc.sourcePath.split('/')[1];
+    const courses = await ctx.db.query('courses').take(200);
+    return courses.find((course) => course.title === title) ?? null;
+  }
+  return null;
+}
+
 async function storageIsKnownToAdmins(ctx: QueryCtx, storageId: string) {
   const [adminDoc, studentDoc, applicationDoc, submission, attachment, resource] = await Promise.all([
     ctx.db.query('adminDocuments').withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any)).first(),
@@ -33,6 +80,16 @@ async function studentCanAccessStorage(ctx: QueryCtx, profile: Doc<'profiles'>, 
     .withIndex('by_storage_id', (q) => q.eq('storageId', storageId as any))
     .first();
   if (publicAdminDoc?.access === 'students') return true;
+  if (publicAdminDoc) {
+    const course = await courseForAdminDocument(ctx, publicAdminDoc);
+    if (course) {
+      const enrollment = await ctx.db
+        .query('enrollments')
+        .withIndex('by_student_course', (q) => q.eq('studentProfileId', studentProfile._id).eq('courseId', course._id))
+        .unique();
+      if (enrollment?.status === 'active') return true;
+    }
+  }
 
   const attachment = await ctx.db
     .query('messageAttachments')
@@ -92,17 +149,11 @@ export const listAdminLibrary = query({
   args: { category: v.optional(v.string()), sourcePath: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    let docs;
-    if (args.sourcePath) {
-      const sourcePath = args.sourcePath;
-      docs = await ctx.db.query('adminDocuments').withIndex('by_source_path', (q) => q.eq('sourcePath', sourcePath)).take(200);
-    } else if (args.category) {
-      const category = args.category;
-      docs = await ctx.db.query('adminDocuments').withIndex('by_category', (q) => q.eq('category', category)).take(200);
-    } else {
-      docs = await ctx.db.query('adminDocuments').order('desc').take(200);
-    }
-    return await Promise.all(docs.map(async (doc) => ({ ...doc, owner: doc.ownerProfileId ? await ctx.db.get(doc.ownerProfileId) : null })));
+    const docs = await collectLibraryDocuments(ctx);
+    return docs
+      .filter((doc) => matchesFolder(doc, args.sourcePath ?? args.category))
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 200);
   },
 });
 
@@ -110,18 +161,174 @@ export const listDocumentFolders = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const docs = await ctx.db.query('adminDocuments').order('desc').take(500);
+    const docs = await collectLibraryDocuments(ctx);
     const folderMap = new Map();
     for (const doc of docs) {
-      const folder = doc.sourcePath || doc.category;
+      const folder = normalizeFolderPath(doc.sourcePath || doc.category || 'General');
       if (!folderMap.has(folder)) {
-        folderMap.set(folder, { name: folder, count: 0, sourcePath: doc.sourcePath || null });
+        folderMap.set(folder, { name: folder, count: 0, sourcePath: folder });
       }
       folderMap.get(folder).count++;
     }
     return Array.from(folderMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   },
 });
+
+async function collectLibraryDocuments(ctx: QueryCtx): Promise<LibraryDocument[]> {
+  const [
+    adminDocs,
+    unitResources,
+    submissions,
+    studentDocs,
+    applicationDocs,
+    messageAttachments,
+  ] = await Promise.all([
+    ctx.db.query('adminDocuments').order('desc').take(200),
+    ctx.db.query('unitResources').order('desc').take(200),
+    ctx.db.query('submissions').order('desc').take(200),
+    ctx.db.query('studentDocuments').order('desc').take(200),
+    ctx.db.query('applicationDocuments').order('desc').take(200),
+    ctx.db.query('messageAttachments').order('desc').take(200),
+  ]);
+
+  const decoratedAdminDocs = await Promise.all(adminDocs.map(async (doc): Promise<LibraryDocument> => {
+    const course = await courseForAdminDocument(ctx, doc);
+    const sourcePath = doc.sourcePath ?? (course ? courseFolder(course) : doc.category);
+    return {
+      ...doc,
+      _id: doc._id,
+      storageId: doc.storageId,
+      sourcePath,
+      sourceTable: 'adminDocuments',
+      sourceId: doc._id,
+      owner: doc.ownerProfileId ? await ctx.db.get(doc.ownerProfileId) : null,
+    };
+  }));
+
+  const decoratedResources = await Promise.all(unitResources.map(async (resource): Promise<LibraryDocument> => {
+    const unit = await ctx.db.get(resource.unitId);
+    const course = unit ? await ctx.db.get(unit.courseId) : null;
+    const courseModule = unit ? await ctx.db.get(unit.moduleId) : null;
+    const sourcePath = courseFolder(course, `${courseModule?.title ?? 'Unassigned Module'}/${unit?.title ?? 'Unknown Unit'}/Resources`);
+    return {
+      _id: `unitResources:${resource._id}`,
+      name: resource.fileName,
+      category: 'Course Resources',
+      access: 'students',
+      storageId: resource.storageId,
+      fileName: resource.fileName,
+      contentType: resource.contentType,
+      size: resource.size,
+      sourcePath,
+      createdBy: resource.uploadedBy,
+      ownerProfileId: resource.uploadedBy,
+      createdAt: resource.uploadedAt,
+      updatedAt: resource.uploadedAt,
+      sourceTable: 'unitResources',
+      sourceId: resource._id,
+      owner: await ctx.db.get(resource.uploadedBy),
+    };
+  }));
+
+  const decoratedSubmissions = await Promise.all(submissions.map(async (submission): Promise<LibraryDocument> => {
+    const assignment = await ctx.db.get(submission.assignmentId);
+    const course = assignment ? await ctx.db.get(assignment.courseId) : null;
+    const studentProfile = await ctx.db.get(submission.studentProfileId);
+    const profile = studentProfile ? await ctx.db.get(studentProfile.profileId) : null;
+    const studentName = profile?.name ?? 'Unknown Student';
+    return {
+      _id: `submissions:${submission._id}`,
+      name: `${studentName} - ${assignment?.title ?? 'Assignment Submission'} - ${submission.fileName}`,
+      category: 'Student Assignments',
+      access: 'admin_team',
+      storageId: submission.storageId,
+      fileName: submission.fileName,
+      contentType: submission.contentType,
+      size: submission.size,
+      sourcePath: `Student Assignments/${studentName}/${course?.title ?? 'Unknown Course'}/${assignment?.title ?? 'Unknown Assignment'}`,
+      createdAt: submission.submittedAt,
+      updatedAt: submission.updatedAt,
+      sourceTable: 'submissions',
+      sourceId: submission._id,
+      owner: profile,
+    };
+  }));
+
+  const decoratedStudentDocs = await Promise.all(studentDocs.map(async (doc): Promise<LibraryDocument> => {
+    const studentProfile = await ctx.db.get(doc.studentProfileId);
+    const profile = studentProfile ? await ctx.db.get(studentProfile.profileId) : null;
+    const studentName = profile?.name ?? 'Unknown Student';
+    return {
+      _id: `studentDocuments:${doc._id}`,
+      name: `${studentName} - ${doc.fileName}`,
+      category: doc.category,
+      access: 'admin_team',
+      storageId: doc.storageId,
+      fileName: doc.fileName,
+      contentType: doc.contentType,
+      size: doc.size,
+      sourcePath: `Students/${studentName}/${doc.category}`,
+      createdAt: doc.uploadedAt,
+      updatedAt: doc.uploadedAt,
+      sourceTable: 'studentDocuments',
+      sourceId: doc._id,
+      owner: profile,
+    };
+  }));
+
+  const decoratedApplicationDocs = await Promise.all(applicationDocs.map(async (doc): Promise<LibraryDocument> => {
+    const application = await ctx.db.get(doc.applicationId);
+    return {
+      _id: `applicationDocuments:${doc._id}`,
+      name: `${application?.fullName ?? 'Applicant'} - ${doc.fileName}`,
+      category: doc.category,
+      access: 'admin_team',
+      storageId: doc.storageId,
+      fileName: doc.fileName,
+      contentType: doc.contentType,
+      size: doc.size,
+      sourcePath: `Applications/${application?.fullName ?? 'Unknown Applicant'}/${doc.category}`,
+      createdAt: doc.uploadedAt,
+      updatedAt: doc.uploadedAt,
+      sourceTable: 'applicationDocuments',
+      sourceId: doc._id,
+      owner: null,
+    };
+  }));
+
+  const decoratedAttachments = await Promise.all(messageAttachments.map(async (attachment): Promise<LibraryDocument> => {
+    const message = await ctx.db.get(attachment.messageId);
+    const conversation = message ? await ctx.db.get(message.conversationId) : null;
+    const studentProfile = conversation ? await ctx.db.get(conversation.studentProfileId) : null;
+    const profile = studentProfile ? await ctx.db.get(studentProfile.profileId) : null;
+    const studentName = profile?.name ?? 'Unknown Student';
+    return {
+      _id: `messageAttachments:${attachment._id}`,
+      name: `${studentName} - ${attachment.fileName}`,
+      category: 'Message Attachments',
+      access: 'admin_team',
+      storageId: attachment.storageId,
+      fileName: attachment.fileName,
+      contentType: attachment.contentType,
+      size: attachment.size,
+      sourcePath: `Messages/${studentName}/${conversation?.subject ?? 'Conversation'}`,
+      createdAt: attachment.uploadedAt,
+      updatedAt: attachment.uploadedAt,
+      sourceTable: 'messageAttachments',
+      sourceId: attachment._id,
+      owner: profile,
+    };
+  }));
+
+  return [
+    ...decoratedAdminDocs,
+    ...decoratedResources,
+    ...decoratedSubmissions,
+    ...decoratedStudentDocs,
+    ...decoratedApplicationDocs,
+    ...decoratedAttachments,
+  ];
+}
 
 export const createAdminDocument = mutation({
   args: {

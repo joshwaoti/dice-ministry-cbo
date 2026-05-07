@@ -127,6 +127,7 @@ export default function AdminSettingsPage() {
                 description="Upload a JPG or PNG profile image."
                 accepted="JPG, PNG"
                 generateUploadUrl={generateUploadUrl}
+                showSuccessToast={false}
                 onUploaded={async (file) => {
                   if (!file.contentType.startsWith('image/')) {
                     toast({ title: 'Image required', description: 'Profile photos must be JPG or PNG files.', tone: 'warning' });

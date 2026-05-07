@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
-import { CheckCircle2, ChevronLeft, FileText, Menu, Save, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Download, FileText, Menu, Save, X } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +29,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         progress: liveCourse.enrollment?.progressPercent ?? 0,
         nextUnit: firstLiveUnit?.title ?? 'Start course',
         lessonBody: firstLiveUnit?.richText ?? 'This document lesson is ready for reading, reflection, and downloadable resources.',
+        resources: firstLiveUnit?.resources ?? [],
         modules: liveCourse.modules.map((module: any) => ({
           id: module._id,
           title: module.title,
@@ -107,6 +108,26 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                 <p>{course.lessonBody}</p>
                 <p><strong>Key learning intent:</strong> move from passive consumption to active reflection, scripture engagement, and practical application.</p>
               </div>
+
+              {course.resources.length > 0 ? (
+                <div className="mt-8 rounded-2xl border border-white/10 bg-slate-800/60 p-5">
+                  <h3 className="font-bold text-white">Unit Documents</h3>
+                  <div className="mt-4 space-y-3">
+                    {course.resources.map((resource: any) => (
+                      <div key={resource._id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-900/80 p-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <FileText className="h-5 w-5 shrink-0 text-accent" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">{resource.fileName}</p>
+                            <p className="text-xs text-slate-400">{resource.size ? `${(resource.size / 1024).toFixed(1)} KB` : 'Document'}</p>
+                          </div>
+                        </div>
+                        <StudentDocumentButton storageId={resource.storageId} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="bg-slate-800/50 rounded-2xl border border-white/5 p-6 mt-auto">
@@ -181,5 +202,22 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
         </div>
       </div>
     </div>
+  );
+}
+
+function StudentDocumentButton({ storageId }: { storageId?: string }) {
+  const url = useQuery(api.documents.getUrl, storageId ? { storageId: storageId as any } : 'skip') as string | null | undefined;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!url}
+      onClick={() => {
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }}
+      className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+    >
+      <Download className="mr-2 h-4 w-4" /> Open
+    </Button>
   );
 }

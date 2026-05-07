@@ -225,6 +225,7 @@ export default function AdminMessagesPage() {
                     description="Upload a rubric, memo, PDF, DOCX, or TXT file into this thread."
                     accepted="PDF, DOCX, TXT"
                     generateUploadUrl={generateUploadUrl}
+                    showSuccessToast={false}
                     onUploaded={async (file) => {
                       const messageId = await sendMessage({ conversationId: thread.id as any, body: `Attached document: ${file.fileName}` });
                       await attachDocument({ messageId: messageId as any, storageId: file.storageId as any, fileName: file.fileName, contentType: file.contentType, size: file.size });

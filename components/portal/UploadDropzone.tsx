@@ -16,6 +16,7 @@ export function UploadDropzone({
   generateUploadUrl,
   onUploaded,
   disabled,
+  showSuccessToast = true,
 }: {
   title: string;
   description: string;
@@ -26,6 +27,7 @@ export function UploadDropzone({
   generateUploadUrl?: () => Promise<string>;
   onUploaded?: (file: { storageId: string; fileName: string; contentType: string; size: number }) => Promise<void> | void;
   disabled?: boolean;
+  showSuccessToast?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -38,32 +40,59 @@ export function UploadDropzone({
       return;
     }
     setUploading(true);
+    let savedCount = 0;
+    let skippedCount = 0;
+    const failedFiles: string[] = [];
     try {
       for (const file of Array.from(files)) {
         if (!isAllowedUpload(file)) {
           toast({ title: 'Unsupported file type', description: 'Only PDF, Word, text, spreadsheet, presentation, JPG, and PNG files are allowed.', tone: 'warning' });
+          skippedCount++;
           continue;
         }
         if (file.size > MAX_UPLOAD_BYTES) {
           toast({ title: 'File too large', description: `Uploads are limited to ${formatUploadLimit()} per file.`, tone: 'warning' });
+          skippedCount++;
           continue;
         }
-        const uploadUrl = await generateUploadUrl();
-        const result = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': file.type || 'application/octet-stream' },
-          body: file,
+        try {
+          const uploadUrl = await generateUploadUrl();
+          const result = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            body: file,
+          });
+          if (!result.ok) throw new Error(`Storage upload failed with status ${result.status}`);
+          const { storageId } = await result.json();
+          await onUploaded({
+            storageId,
+            fileName: file.name,
+            contentType: file.type || 'application/octet-stream',
+            size: file.size,
+          });
+          savedCount++;
+        } catch (error) {
+          failedFiles.push(file.name);
+          toast({
+            title: 'Upload failed',
+            description: error instanceof Error ? `${file.name}: ${error.message}` : `${file.name} could not be saved.`,
+            tone: 'warning',
+          });
+        }
+      }
+      if (savedCount > 0 && showSuccessToast) {
+        toast({
+          title: savedCount === 1 ? 'Document uploaded' : 'Documents uploaded',
+          description: `${savedCount} file${savedCount === 1 ? '' : 's'} saved successfully${skippedCount || failedFiles.length ? `; ${skippedCount + failedFiles.length} not saved.` : '.'}`,
+          tone: 'success',
         });
-        if (!result.ok) throw new Error(`Upload failed for ${file.name}`);
-        const { storageId } = await result.json();
-        await onUploaded({
-          storageId,
-          fileName: file.name,
-          contentType: file.type || 'application/octet-stream',
-          size: file.size,
+      } else if (skippedCount > 0 || failedFiles.length > 0) {
+        toast({
+          title: 'No documents uploaded',
+          description: `${skippedCount + failedFiles.length} file${skippedCount + failedFiles.length === 1 ? '' : 's'} could not be saved.`,
+          tone: 'warning',
         });
       }
-      toast({ title: 'Upload complete', description: 'The selected file has been saved.', tone: 'success' });
     } catch (error) {
       toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Try again with a supported document.', tone: 'warning' });
     } finally {

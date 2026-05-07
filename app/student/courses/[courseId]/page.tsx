@@ -3,7 +3,7 @@
 import { use } from 'react';
 import Link from 'next/link';
 import { useQuery } from 'convex/react';
-import { ArrowRight, BookOpen, Clock3, FileText } from 'lucide-react';
+import { ArrowRight, BookOpen, Clock3, Download, FileText } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ export default function CourseDetail({ params }: { params: Promise<{ courseId: s
         moduleCount: liveCourse.modules.length,
         mentor: 'Assigned mentor',
         nextUnit: liveCourse.modules[0]?.units[0]?.title ?? 'Open first unit',
+        courseDocuments: liveCourse.courseDocuments ?? [],
         modules: liveCourse.modules.map((module: any) => ({
           id: module._id,
           title: module.title,
@@ -126,6 +127,23 @@ export default function CourseDetail({ params }: { params: Promise<{ courseId: s
               <p>Progress indicators stay visible so students can self-orient without hunting through the interface.</p>
             </div>
           </div>
+          <div className="rounded-[26px] border border-border bg-white p-6 shadow-sm">
+            <h2 className="font-display text-xl font-bold text-primary">Course Documents</h2>
+            <div className="mt-4 space-y-3">
+              {course.courseDocuments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No course-level documents have been attached yet.</p>
+              ) : null}
+              {course.courseDocuments.map((document: any) => (
+                <div key={document._id} className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-primary">{document.fileName || document.name}</p>
+                    <p className="text-xs text-muted-foreground">{document.size ? `${(document.size / 1024).toFixed(1)} KB` : 'Document'}</p>
+                  </div>
+                  <StudentDocumentButton storageId={document.storageId} />
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="rounded-[26px] border border-border bg-primary p-6 text-white shadow-sm">
             <h2 className="font-display text-xl font-bold">Next recommended step</h2>
             <p className="mt-2 text-sm text-white/80">Continue with <span className="font-semibold text-white">{course.nextUnit}</span> to keep your current streak active.</p>
@@ -136,6 +154,22 @@ export default function CourseDetail({ params }: { params: Promise<{ courseId: s
         </aside>
       </section>
     </div>
+  );
+}
+
+function StudentDocumentButton({ storageId }: { storageId?: string }) {
+  const url = useQuery(api.documents.getUrl, storageId ? { storageId: storageId as any } : 'skip') as string | null | undefined;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!url}
+      onClick={() => {
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }}
+    >
+      <Download className="mr-2 h-4 w-4" /> Open
+    </Button>
   );
 }
 

@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useMutation, useQuery } from 'convex/react';
-import { BookOpenCheck, ClipboardCheck, FileUp, ListTree, Plus, Save, Send, Trash2, Edit2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { BookOpenCheck, ClipboardCheck, FileText, FileUp, ListTree, Plus, Save, Send, Trash2, Edit2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -73,11 +73,13 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
       duration: unit.estimatedMinutes ? `${unit.estimatedMinutes} min` : 'Self-paced',
       richText: unit.richText,
       order: unit.order,
+      resources: unit.resources ?? [],
     })),
   })) ?? [];
 
   const targetModuleId = selectedModuleId ?? modules[0]?.id;
   const targetUnitId = selectedUnitId ?? modules.find((m: any) => m.id === targetModuleId)?.units?.[0]?.id;
+  const selectedUnit = modules.flatMap((module: any) => module.units).find((unit: any) => unit.id === targetUnitId);
   const courseTitle = liveCourse.title;
   const courseSynopsis = liveCourse.synopsis;
 
@@ -335,6 +337,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
             helper="Resources are attached to the selected unit."
             disabled={!canQueryConvexId(id) || !targetUnitId}
             generateUploadUrl={generateUploadUrl}
+            showSuccessToast={false}
             onUploaded={async (file) => {
               if (!targetUnitId) return;
               await addUnitResource({
@@ -348,9 +351,47 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
               toast({ title: 'Resource attached', description: `${file.fileName} was attached to the unit.`, tone: 'success' });
             }}
           />
+          <div className="rounded-[24px] border border-border bg-white p-5 shadow-sm">
+            <h3 className="font-display text-xl font-bold text-primary">Attached Unit Documents</h3>
+            <div className="mt-4 space-y-3">
+              {!selectedUnit?.resources?.length ? (
+                <p className="text-sm text-muted-foreground">Select a unit with attached documents, or upload one above.</p>
+              ) : null}
+              {selectedUnit?.resources?.map((resource: any) => (
+                <div key={resource._id} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
+                  <FileText className="h-5 w-5 shrink-0 text-accent" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-primary">{resource.fileName}</p>
+                    <p className="text-xs text-muted-foreground">{resource.size ? `${(resource.size / 1024).toFixed(1)} KB` : 'Document'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="space-y-6">
+          <div className="rounded-[24px] border border-border bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-accent/10 p-3 text-accent"><FileText className="h-5 w-5" /></div>
+              <div>
+                <h2 className="font-display text-xl font-bold text-primary">Course Documents</h2>
+                <p className="text-sm text-muted-foreground">Files uploaded when the course was created.</p>
+              </div>
+            </div>
+            <div className="mt-5 space-y-3">
+              {!liveCourse.courseDocuments?.length ? (
+                <p className="text-sm text-muted-foreground">No course-level documents attached yet.</p>
+              ) : null}
+              {liveCourse.courseDocuments?.map((document: any) => (
+                <div key={document._id} className="rounded-2xl border border-border p-3">
+                  <p className="truncate text-sm font-semibold text-primary">{document.fileName || document.name}</p>
+                  <p className="text-xs text-muted-foreground">{document.size ? `${(document.size / 1024).toFixed(1)} KB` : 'Document'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-[24px] border border-border bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-accent/10 p-3 text-accent"><ListTree className="h-5 w-5" /></div>
