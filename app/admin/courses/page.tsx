@@ -138,8 +138,8 @@ export default function AdminCoursesPage() {
             <article key={course.id} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">{course.type}</p>
-                  <h2 className="mt-2 font-display text-2xl font-bold text-primary">{course.title}</h2>
+                  <h2 className="font-display text-2xl font-bold uppercase text-primary">{course.title}</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{course.type}</p>
                 </div>
                 <StatusPill label={course.status} tone={course.status === 'Published' ? 'success' : 'warning'} />
               </div>

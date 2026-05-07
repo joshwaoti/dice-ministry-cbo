@@ -297,6 +297,11 @@
     margin: 1.5rem 0;
   }
 
+  .clerk-login-shell .cl-footerAction__signIn,
+  .clerk-login-shell [data-localization-key="signIn.start.actionLink"] {
+    display: none !important;
+  }
+
   @media (min-width: 768px) {
     .rich-text-content {
       font-size: 1.125rem;

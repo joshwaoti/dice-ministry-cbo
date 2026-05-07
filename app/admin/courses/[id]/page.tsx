@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { useMutation, useQuery } from 'convex/react';
 import { BookOpenCheck, ClipboardCheck, FileUp, ListTree, Plus, Save, Send, Trash2, Edit2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
-import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/portal/StatusPill';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
@@ -184,13 +183,19 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
   };
 
   return (
-    <div className="space-y-8 pb-10">
-      <PortalPageHeader
-        eyebrow="Course Builder"
-        title={courseTitle}
-        description={courseSynopsis}
-        actions={(
-          <>
+      <div className="space-y-8 pb-10">
+        <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0 space-y-2">
+            <p className="break-words text-xs font-semibold uppercase tracking-[0.28em] text-accent">Course Builder</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="break-words font-display text-2xl font-bold leading-tight text-primary sm:text-3xl">{courseTitle}</h1>
+              <StatusPill label={liveCourse.status} tone={liveCourse.status === 'published' ? 'success' : liveCourse.status === 'archived' ? 'warning' : 'info'} />
+            </div>
+            {courseSynopsis ? (
+              <p className="max-w-3xl break-words text-sm leading-6 text-muted-foreground sm:text-base">{courseSynopsis.toLowerCase()}</p>
+            ) : null}
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 [&>button]:w-full [&>a]:w-full sm:[&>button]:w-auto sm:[&>a]:w-auto">
             <Button variant="outline" onClick={async () => {
               await updateCourse({ courseId: id as any, title: courseTitle, synopsis: courseSynopsis });
               toast({ title: 'Draft saved', description: `${courseTitle} was saved.`, tone: 'success' });
@@ -200,9 +205,8 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
             <Button variant="primary" onClick={() => setShowPublishDialog(true)}>
               <Send className="mr-2 h-4 w-4" /> Publish Course
             </Button>
-          </>
-        )}
-      />
+          </div>
+        </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
         <section className="space-y-6 rounded-[24px] border border-border bg-white p-6 shadow-sm">
