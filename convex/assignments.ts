@@ -4,6 +4,37 @@ import { mutation, query } from './_generated/server';
 import { assertDocumentContentType, assertDocumentSize, canGrade, requireAdmin, requireStudent, writeAudit } from './model';
 import { assignmentFeedbackFolder } from './documents';
 
+function plainText(value?: string) {
+  if (!value) return 'Upload your completed assignment document.';
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim() || 'Upload your completed assignment document.';
+}
+
+function isAssignmentDoc(doc: unknown): doc is Doc<'assignments'> {
+  return Boolean(
+    doc
+    && typeof doc === 'object'
+    && 'unitId' in doc
+    && 'allowedTypes' in doc
+    && 'maxFileSizeMB' in doc
+  );
+}
+
+function isAssignmentUnitDoc(doc: unknown): doc is Doc<'units'> {
+  return Boolean(doc && typeof doc === 'object' && 'type' in doc && (doc as Doc<'units'>).type === 'assignment');
+}
+
 export const listForStudent = query({
   args: {},
   handler: async (ctx) => {
@@ -35,7 +66,7 @@ export const listForStudent = query({
             unitId: unit._id,
             courseId: unit.courseId,
             title: unit.title,
-            instructions: unit.richText ?? 'Upload your completed assignment document.',
+            instructions: plainText(unit.richText),
             allowedTypes: ['pdf', 'doc', 'docx', 'txt'] as Array<'pdf' | 'doc' | 'docx' | 'txt'>,
             maxFileSizeMB: 20,
             createdAt: unit.createdAt,
@@ -112,10 +143,11 @@ export const submit = mutation({
     if (args.contentType.startsWith('image/') || args.contentType.includes('spreadsheet') || args.contentType.includes('presentation')) {
       throw new ConvexError('Assignment submissions must be PDF, DOC, DOCX, or TXT documents.');
     }
-    let assignment = await ctx.db.get(args.assignmentId as any) as Doc<'assignments'> | null;
+    const selectedDocument = await ctx.db.get(args.assignmentId as any);
+    let assignment = isAssignmentDoc(selectedDocument) ? selectedDocument : null;
     if (!assignment) {
-      const unit = await ctx.db.get(args.assignmentId as any) as Doc<'units'> | null;
-      if (!unit || unit.type !== 'assignment') throw new ConvexError('Assignment not found.');
+      const unit = isAssignmentUnitDoc(selectedDocument) ? selectedDocument : null;
+      if (!unit) throw new ConvexError('Assignment not found.');
       const now = Date.now();
       const existingForUnit = await ctx.db
         .query('assignments')
@@ -126,7 +158,7 @@ export const submit = mutation({
           unitId: unit._id,
           courseId: unit.courseId,
           title: unit.title,
-          instructions: unit.richText ?? 'Upload your completed assignment document.',
+          instructions: plainText(unit.richText),
           allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
           maxFileSizeMB: 20,
           createdAt: now,
@@ -136,7 +168,7 @@ export const submit = mutation({
         unitId: unit._id,
         courseId: unit.courseId,
         title: unit.title,
-        instructions: unit.richText ?? 'Upload your completed assignment document.',
+        instructions: plainText(unit.richText),
         allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
         maxFileSizeMB: 20,
         createdAt: now,

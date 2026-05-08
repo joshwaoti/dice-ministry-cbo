@@ -15,6 +15,23 @@ import { PaginationControls, paginate } from '@/components/portal/PaginationCont
 
 const PAGE_SIZE = 5;
 
+function stripHtml(value?: string) {
+  if (!value) return 'Upload your completed assignment document.';
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim() || 'Upload your completed assignment document.';
+}
+
 export default function StudentAssignments() {
   const [activeTab, setActiveTab] = useState<'Pending' | 'Submitted' | 'Graded'>('Pending');
   const [page, setPage] = useState(1);
@@ -30,7 +47,7 @@ export default function StudentAssignments() {
       title: assignment.title,
       course: assignment.course?.title ?? 'Course unavailable',
       due: assignment.dueAt ? new Date(assignment.dueAt).toLocaleDateString() : 'No due date',
-      instructions: assignment.instructions,
+      instructions: stripHtml(assignment.instructions),
       accepted: assignment.allowedTypes?.join(', ').toUpperCase() ?? 'PDF, DOC, DOCX, TXT',
       status,
       grade: assignment.submission?.grade ?? 'Pending',
@@ -76,12 +93,21 @@ export default function StudentAssignments() {
                 description="Assignment tasks and document submissions will appear here when they are assigned to your enrolled courses."
               />
             ) : null}
-            {pageItems.map((assignment) => (
-              <div key={assignment.id} className="rounded-[22px] border border-border p-5 transition hover:border-accent">
+            {pageItems.map((assignment) => {
+              const isSelected = assignment.id === selectedAssignmentId;
+              return (
+              <div
+                key={assignment.id}
+                className={`rounded-[22px] border p-5 transition ${
+                  isSelected
+                    ? 'border-accent bg-accent/5 shadow-[0_0_0_3px_rgba(255,160,64,0.18)]'
+                    : 'border-border hover:border-accent'
+                }`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-2xl">
                     <StatusPill
-                      label={assignment.status}
+                      label={isSelected ? 'Selected for upload' : assignment.status}
                       tone={assignment.status === 'Graded' ? 'success' : assignment.status === 'Submitted' ? 'info' : 'warning'}
                     />
                     <h3 className="mt-3 font-display text-2xl font-bold text-primary">{assignment.title}</h3>
@@ -151,7 +177,8 @@ export default function StudentAssignments() {
                   </div>
                 ) : null}
               </div>
-            ))}
+              );
+            })}
           </div>
           <PaginationControls page={page} totalPages={totalPages} totalItems={visibleAssignments.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </section>

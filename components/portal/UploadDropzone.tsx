@@ -6,6 +6,17 @@ import { useToast } from '@/components/ui/toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatUploadLimit, isAllowedUpload, MAX_UPLOAD_BYTES } from '@/lib/uploadRules';
 
+function friendlyUploadError(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  if (/not enrolled/i.test(message)) return 'You are not actively enrolled in this assignment course.';
+  if (/assignment not found/i.test(message)) return 'This assignment could not be found. Refresh the page and choose the assignment again.';
+  if (/file exceeds|too large|size limit/i.test(message)) return 'The selected file is larger than the assignment limit.';
+  if (/PDF, DOC, DOCX, or TXT|unsupported|content type|mime/i.test(message)) return 'Choose a PDF, DOC, DOCX, or TXT file for assignment submissions.';
+  if (/storage upload failed/i.test(message)) return 'The file could not be saved to storage. Please try again.';
+  if (/schema|validator|table|Convex|Uncaught|Path:/i.test(message)) return 'The assignment could not be submitted. Please refresh the page and try again.';
+  return message || 'Try again with a supported document.';
+}
+
 export function UploadDropzone({
   title,
   description,
@@ -77,7 +88,7 @@ export function UploadDropzone({
           failedFiles.push(file.name);
           toast({
             title: 'Upload failed',
-            description: error instanceof Error ? `${file.name}: ${error.message}` : `${file.name} could not be saved.`,
+            description: `${file.name}: ${friendlyUploadError(error)}`,
             tone: 'warning',
           });
         }
@@ -96,7 +107,7 @@ export function UploadDropzone({
         });
       }
     } catch (error) {
-      toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Try again with a supported document.', tone: 'warning' });
+      toast({ title: 'Upload failed', description: friendlyUploadError(error), tone: 'warning' });
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';

@@ -469,6 +469,8 @@ describe('rich text and uploads', () => {
     const { profileId: adminProfileId } = await seedProfile(t, 'admin');
     const { studentProfileId } = await seedProfile(t, 'student');
     const student = t.withIdentity(studentIdentity);
+    const submissionFileId = await t.run(async (ctx) => await ctx.storage.store(new Blob(['legacy work'], { type: 'application/pdf' })));
+    let legacyUnitId: Id<'units'>;
 
     await t.run(async (ctx) => {
       const now = Date.now();
@@ -489,7 +491,7 @@ describe('rich text and uploads', () => {
         createdAt: now,
         updatedAt: now,
       });
-      await ctx.db.insert('units', {
+      legacyUnitId = await ctx.db.insert('units', {
         courseId,
         moduleId,
         title: 'Legacy Reflection',
@@ -513,7 +515,33 @@ describe('rich text and uploads', () => {
 
     const rows = await student.query(api.assignments.listForStudent, {});
     expect(rows.map((row) => row.title)).toContain('Legacy Reflection');
-    expect((rows.find((row) => row.title === 'Legacy Reflection') as any)?.isVirtualAssignment).toBe(true);
+    const legacyRow = rows.find((row) => row.title === 'Legacy Reflection') as any;
+    expect(legacyRow?.isVirtualAssignment).toBe(true);
+    expect(legacyRow?.instructions).toBe('Submit this legacy task.');
+
+    await student.mutation(api.assignments.submit, {
+      assignmentId: legacyUnitId! as any,
+      storageId: submissionFileId,
+      fileName: 'legacy-reflection.pdf',
+      contentType: 'application/pdf',
+      size: 2048,
+    });
+
+    const saved = await t.run(async (ctx) => {
+      const assignment = await ctx.db
+        .query('assignments')
+        .withIndex('by_unit', (q) => q.eq('unitId', legacyUnitId!))
+        .unique();
+      const submission = assignment
+        ? await ctx.db
+          .query('submissions')
+          .withIndex('by_assignment', (q) => q.eq('assignmentId', assignment._id))
+          .unique()
+        : null;
+      return { assignment, submission };
+    });
+    expect(saved.assignment?.instructions).toBe('Submit this legacy task.');
+    expect(saved.submission?.assignmentId).toBe(saved.assignment?._id);
   });
 });
 
