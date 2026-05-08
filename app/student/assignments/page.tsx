@@ -65,7 +65,7 @@ export default function StudentAssignments() {
       <PortalPageHeader
         eyebrow="Student Work"
         title="Assignments"
-        description="Submission requirements, upload surfaces, and grading visibility are all present in the student experience."
+        description="View assignments, submit work, and download teacher feedback."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">

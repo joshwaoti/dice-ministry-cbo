@@ -543,6 +543,113 @@ describe('rich text and uploads', () => {
     expect(saved.assignment?.instructions).toBe('Submit this legacy task.');
     expect(saved.submission?.assignmentId).toBe(saved.assignment?._id);
   });
+
+  test('admins can delete assignment reviews', async () => {
+    const t = testBackend();
+    const { profileId: adminProfileId } = await seedProfile(t, 'admin');
+    const { studentProfileId } = await seedProfile(t, 'student');
+    const admin = t.withIdentity(adminIdentity);
+    const submissionFileId = await t.run(async (ctx) => await ctx.storage.store(new Blob(['delete me'], { type: 'application/pdf' })));
+    const submissionId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const courseId = await ctx.db.insert('courses', {
+        title: 'Delete Review Course',
+        slug: 'delete-review-course',
+        synopsis: 'Test deletion',
+        status: 'published',
+        createdBy: adminProfileId,
+        updatedBy: adminProfileId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const moduleId = await ctx.db.insert('modules', { courseId, title: 'Module', order: 0, createdAt: now, updatedAt: now });
+      const unitId = await ctx.db.insert('units', { courseId, moduleId, title: 'Task', order: 0, type: 'assignment', status: 'published', createdAt: now, updatedAt: now });
+      const assignmentId = await ctx.db.insert('assignments', {
+        unitId,
+        courseId,
+        title: 'Task',
+        instructions: 'Submit work.',
+        allowedTypes: ['pdf'],
+        maxFileSizeMB: 20,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return await ctx.db.insert('submissions', {
+        assignmentId,
+        studentProfileId: studentProfileId!,
+        storageId: submissionFileId,
+        fileName: 'delete-me.pdf',
+        contentType: 'application/pdf',
+        size: 100,
+        status: 'pending_review',
+        submittedAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await admin.mutation(api.assignments.deleteSubmission, { submissionId });
+    const deleted = await t.run(async (ctx) => await ctx.db.get(submissionId));
+    expect(deleted).toBeNull();
+  });
+});
+
+describe('admin visibility and messages', () => {
+  test('moderators see moderators but not admins or super admins', async () => {
+    const t = testBackend();
+    await seedProfile(t, 'super_admin');
+    await seedProfile(t, 'admin');
+    const moderatorIdentity = {
+      subject: 'user_moderator_legacy',
+      tokenIdentifier: 'https://clerk.test|moderator-token',
+      email: 'moderator@example.com',
+      name: 'Moderator User',
+    };
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert('profiles', {
+        clerkUserId: moderatorIdentity.subject,
+        clerkTokenIdentifier: moderatorIdentity.tokenIdentifier,
+        email: moderatorIdentity.email,
+        name: moderatorIdentity.name,
+        role: 'moderator',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert('profiles', {
+        clerkUserId: 'user_moderator_peer',
+        clerkTokenIdentifier: 'https://clerk.test|moderator-peer',
+        email: 'moderator-peer@example.com',
+        name: 'Moderator Peer',
+        role: 'moderator',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const rows = await t.withIdentity(moderatorIdentity).query(api.adminUsers.list, {});
+    expect(rows.map((row: Doc<'profiles'>) => row.role).every((role: string) => role === 'moderator')).toBe(true);
+    expect(rows.map((row: Doc<'profiles'>) => row.name)).toContain('Moderator Peer');
+    expect(rows.map((row: Doc<'profiles'>) => row.name)).not.toContain('Admin User');
+  });
+
+  test('admins can delete messages and conversations', async () => {
+    const t = testBackend();
+    await seedProfile(t, 'admin');
+    const { studentProfileId } = await seedProfile(t, 'student');
+    const admin = t.withIdentity(adminIdentity);
+    const conversationId = await admin.mutation(api.messages.startAdminConversation, {
+      studentProfileId: studentProfileId!,
+      subject: 'Deletion test',
+      body: 'Initial message',
+    });
+    const messageId = await admin.mutation(api.messages.send, { conversationId, body: 'Remove this message' });
+    await admin.mutation(api.messages.remove, { messageId });
+    expect(await t.run(async (ctx) => await ctx.db.get(messageId))).toBeNull();
+    await admin.mutation(api.messages.removeConversation, { conversationId });
+    expect(await t.run(async (ctx) => await ctx.db.get(conversationId))).toBeNull();
+  });
 });
 
 describe('public submissions', () => {

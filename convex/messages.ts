@@ -197,6 +197,50 @@ export const edit = mutation({
   },
 });
 
+export const remove = mutation({
+  args: { messageId: v.id('messages') },
+  handler: async (ctx, args) => {
+    const profile = await requireProfile(ctx);
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new ConvexError('Message not found.');
+    await assertConversationAccess(ctx, profile, message.conversationId);
+    const isAdmin = profile.role === 'super_admin' || profile.role === 'admin' || profile.role === 'moderator';
+    if (!isAdmin && message.senderProfileId !== profile._id) throw new ConvexError('You can delete only messages you sent.');
+    const attachments = await ctx.db
+      .query('messageAttachments')
+      .withIndex('by_message', (q) => q.eq('messageId', args.messageId))
+      .collect();
+    for (const attachment of attachments) {
+      await ctx.db.delete(attachment._id);
+    }
+    await ctx.db.delete(args.messageId);
+    await ctx.db.patch(message.conversationId, { updatedAt: Date.now() });
+  },
+});
+
+export const removeConversation = mutation({
+  args: { conversationId: v.id('conversations') },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx, ['super_admin', 'admin']);
+    await assertConversationAccess(ctx, actor, args.conversationId);
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_conversation', (q) => q.eq('conversationId', args.conversationId))
+      .collect();
+    for (const message of messages) {
+      const attachments = await ctx.db
+        .query('messageAttachments')
+        .withIndex('by_message', (q) => q.eq('messageId', message._id))
+        .collect();
+      for (const attachment of attachments) {
+        await ctx.db.delete(attachment._id);
+      }
+      await ctx.db.delete(message._id);
+    }
+    await ctx.db.delete(args.conversationId);
+  },
+});
+
 export const attachDocument = mutation({
   args: {
     messageId: v.id('messages'),

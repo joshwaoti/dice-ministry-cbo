@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
-import { BadgePlus, ShieldCheck, UserCog2 } from 'lucide-react';
+import { BadgePlus, LayoutGrid, List } from 'lucide-react';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
@@ -20,6 +20,7 @@ const PAGE_SIZE = 6;
 export default function AdminUsersPage() {
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'moderator' | 'super_admin'>('moderator');
@@ -48,6 +49,7 @@ export default function AdminUsersPage() {
     })) ?? [];
   const { pageItems, totalPages } = paginate(normalizedUsers, page, PAGE_SIZE);
   const canInviteAllRoles = currentProfile?.role === 'super_admin';
+  const canInviteAdmins = currentProfile?.role === 'super_admin' || currentProfile?.role === 'admin';
   const roleOptions = canInviteAllRoles
     ? [
         { value: 'super_admin', label: 'Super Admin' },
@@ -62,7 +64,7 @@ export default function AdminUsersPage() {
       return;
     }
     await inviteAdmin({ name, email, role: canInviteAllRoles ? role : 'moderator', scope });
-    toast({ title: 'Admin invitation sent', description: 'Clerk has emailed the invite and the pending admin profile was created in Convex.', tone: 'success' });
+    toast({ title: 'Admin invitation sent', description: 'An email invitation was sent and the pending admin profile was created.', tone: 'success' });
     setName('');
     setEmail('');
     setScope('');
@@ -90,13 +92,17 @@ export default function AdminUsersPage() {
         eyebrow="Admin Portal"
         title="Admin Users"
         description="Manage super admins, instructors, admissions officers, and content managers with clear role boundaries."
-        actions={<Button variant="primary" onClick={() => setOpen(true)}><BadgePlus className="mr-2 h-4 w-4" /> Invite Admin User</Button>}
+        actions={canInviteAdmins ? <Button variant="primary" onClick={() => setOpen(true)}><BadgePlus className="mr-2 h-4 w-4" /> Invite Admin User</Button> : null}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
+      <div className="grid gap-6">
         <section className="rounded-3xl border border-border bg-white shadow-sm">
-          <div className="border-b border-border px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-5">
             <h2 className="font-display text-2xl font-bold text-primary">Team Directory</h2>
+            <div className="flex gap-2">
+              <Button size="sm" variant={view === 'grid' ? 'primary' : 'outline'} onClick={() => setView('grid')}><LayoutGrid className="mr-2 h-4 w-4" /> Grid</Button>
+              <Button size="sm" variant={view === 'list' ? 'primary' : 'outline'} onClick={() => setView('list')}><List className="mr-2 h-4 w-4" /> List</Button>
+            </div>
           </div>
           <div className="space-y-4 p-4">
             {liveUsers === undefined ? <LoadingPortalState label="Loading admin users..." /> : null}
@@ -105,16 +111,40 @@ export default function AdminUsersPage() {
                 variant="users"
                 title="No admin users visible"
                 description="Invite a moderator or admin user. Super admin visibility is protected by backend role rules."
-                action={<div className="mt-5"><Button variant="primary" onClick={() => setOpen(true)}><BadgePlus className="mr-2 h-4 w-4" /> Invite Admin User</Button></div>}
+                action={canInviteAdmins ? <div className="mt-5"><Button variant="primary" onClick={() => setOpen(true)}><BadgePlus className="mr-2 h-4 w-4" /> Invite Admin User</Button></div> : undefined}
               />
             ) : null}
-            {pageItems.map((user) => (
+            {view === 'list' ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left">
+                  <thead className="bg-surface text-xs font-bold uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Role</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {pageItems.map((user) => (
+                      <tr key={user.id}>
+                        <td className="px-4 py-3 font-semibold text-primary">{user.name}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{user.role}</td>
+                        <td className="px-4 py-3"><StatusPill label={user.status} tone={user.status === 'Active' ? 'success' : 'warning'} /></td>
+                        <td className="px-4 py-3 text-right"><Button size="sm" variant="outline" onClick={() => openRoleEditor(user)} disabled={user.rawRole === 'super_admin' && !canInviteAllRoles}>Edit</Button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : pageItems.map((user) => (
               <article key={user.id} className="rounded-2xl border border-border p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="font-semibold text-primary">{user.name}</p>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-accent">{user.id}</p>
                   </div>
                   <StatusPill label={user.status} tone={user.status === 'Active' ? 'success' : 'warning'} />
                 </div>
@@ -135,7 +165,7 @@ export default function AdminUsersPage() {
                     disabled={user.rawStatus === 'active' || user.rawStatus === 'suspended'}
                     onClick={async () => {
                       if (user.isLive) await resendAdminInvite({ profileId: user.id as any });
-                      toast({ title: `${user.name} invited again`, description: 'A fresh Clerk invitation email was sent with portal access instructions.', tone: 'success' });
+                      toast({ title: `${user.name} invited again`, description: 'A fresh email invitation was sent with portal access instructions.', tone: 'success' });
                     }}
                   >
                     Resend Invite
@@ -157,36 +187,6 @@ export default function AdminUsersPage() {
           </div>
         </section>
 
-        <aside className="space-y-6">
-          <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div>
-              <div>
-                <h2 className="font-display text-xl font-bold text-primary">Role Matrix</h2>
-                <p className="text-sm text-muted-foreground">High-level visibility of who can do what.</p>
-              </div>
-            </div>
-            <div className="mt-5 space-y-3 text-sm text-muted-foreground">
-              <div className="rounded-2xl border border-border px-4 py-3">Super Admins: full portal control, publishing, and all user invitations.</div>
-              <div className="rounded-2xl border border-border px-4 py-3">Admins / Teachers: applications, students, coursework, and moderator invitations.</div>
-              <div className="rounded-2xl border border-border px-4 py-3">Moderators: coursework support, grading, and learner messaging.</div>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-accent/10 p-3 text-accent"><UserCog2 className="h-5 w-5" /></div>
-              <div>
-                <h2 className="font-display text-xl font-bold text-primary">Audit Notes</h2>
-                <p className="text-sm text-muted-foreground">Recent admin access changes.</p>
-              </div>
-            </div>
-            <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
-              <li className="rounded-2xl bg-surface px-4 py-3">Grace Njeri promoted to Instructor • Today</li>
-              <li className="rounded-2xl bg-surface px-4 py-3">Mark Were pending first-login verification • Yesterday</li>
-              <li className="rounded-2xl bg-surface px-4 py-3">Lydia Mwangi granted document upload rights • Apr 25</li>
-            </ul>
-          </div>
-        </aside>
       </div>
 
       <PortalDialog open={open} onClose={() => setOpen(false)} title="Invite Admin User" description="Add instructors, admissions staff, or other administrators and define their permissions.">

@@ -3,7 +3,7 @@
 import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
-import { BookOpenCheck, CalendarClock, FileUp, GraduationCap, Mail, ShieldCheck, UserRoundCheck } from 'lucide-react';
+import { BookOpenCheck, FileUp, GraduationCap, Mail, ShieldCheck, UserRoundCheck } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 
-function canQueryConvexId(id: string) {
+function canQueryRecordId(id: string) {
   return id.length > 20 && !id.includes('-');
 }
 
@@ -31,9 +31,8 @@ const statusLabels: Record<string, string> = {
 export default function StudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
-  const liveStudent = useQuery(api.students.get, canQueryConvexId(id) ? { studentProfileId: id as any } : 'skip') as any | undefined;
+  const liveStudent = useQuery(api.students.get, canQueryRecordId(id) ? { studentProfileId: id as any } : 'skip') as any | undefined;
   const liveSubmissions = useQuery(api.assignments.listSubmissions, {}) as any[] | undefined;
-  const cohorts = useQuery(api.cohorts.list) as any[] | undefined;
   const admins = useQuery(api.adminUsers.list) as any[] | undefined;
   const courses = useQuery(api.courses.listAdmin) as any[] | undefined;
   const updateStudent = useMutation(api.students.update);
@@ -50,7 +49,6 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [courseId, setCourseId] = useState('');
   const [editForm, setEditForm] = useState({
     programTrack: 'Ignite',
-    cohortId: '',
     mentorProfileId: '',
     enrollmentStatus: 'active',
   });
@@ -59,12 +57,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const student = liveStudent
     ? {
         id: liveStudent._id,
-        code: liveStudent.studentCode,
         initials: (liveStudent.profile?.name ?? 'Student').split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
         name: liveStudent.profile?.name ?? 'Student',
         email: liveStudent.profile?.email ?? 'No email',
         track: liveStudent.programTrack ?? 'Ignite',
-        cohort: liveStudent.cohort?.name ?? 'Unassigned',
         status: statusLabels[liveStudent.enrollmentStatus] ?? liveStudent.enrollmentStatus,
         enrollmentStatus: liveStudent.enrollmentStatus,
         mentor: liveStudent.mentor?.name ?? 'Unassigned',
@@ -92,7 +88,6 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     if (!liveStudent) return;
     setEditForm({
       programTrack: liveStudent.programTrack ?? 'Ignite',
-      cohortId: liveStudent.cohortId ?? '',
       mentorProfileId: liveStudent.mentorProfileId ?? '',
       enrollmentStatus: liveStudent.enrollmentStatus === 'pending_invite' ? 'active' : liveStudent.enrollmentStatus,
     });
@@ -104,21 +99,20 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     await updateStudent({
       studentProfileId: liveStudent._id,
       programTrack: editForm.programTrack,
-      cohortId: editForm.cohortId ? (editForm.cohortId as any) : undefined,
       mentorProfileId: editForm.mentorProfileId ? (editForm.mentorProfileId as any) : undefined,
       enrollmentStatus: editForm.enrollmentStatus as any,
     });
-    toast({ title: 'Student updated', description: 'Profile, mentor, cohort, and access settings were saved.', tone: 'success' });
+    toast({ title: 'Student updated', description: 'Profile, mentor, and access settings were saved.', tone: 'success' });
     setEditOpen(false);
   };
 
-  if (canQueryConvexId(id) && liveStudent === undefined) return <LoadingPortalState label="Loading student profile..." />;
+  if (canQueryRecordId(id) && liveStudent === undefined) return <LoadingPortalState label="Loading student profile..." />;
   if (!student) {
     return (
       <EmptyPortalState
         variant="students"
         title="Student not found"
-        description="This profile could not be loaded from Convex."
+        description="This profile could not be loaded."
         action={<Button className="mt-5" variant="outline" asChild><Link href="/admin/students">Back to students</Link></Button>}
       />
     );
@@ -129,7 +123,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       <PortalPageHeader
         eyebrow="Student Profile"
         title={student.name}
-        description="Manage admissions, access, mentor assignment, cohort placement, course enrollment, documents, and support messages."
+        description="Manage admissions, access, mentor assignment, course enrollment, documents, and support messages."
         actions={
           <>
             <Button variant="outline" onClick={() => setMessageOpen(true)}>
@@ -147,7 +141,6 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-2xl font-bold text-white">{student.initials}</div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{student.code}</p>
               <h2 className="mt-1 font-display text-2xl font-bold text-primary">{student.name}</h2>
               <p className="text-sm text-muted-foreground">{student.email}</p>
             </div>
@@ -155,7 +148,6 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
           <div className="grid gap-4 md:grid-cols-2">
             <InfoCard icon={GraduationCap} label="Program Track" value={student.track} />
-            <InfoCard icon={CalendarClock} label="Cohort" value={student.cohort} />
             <InfoCard icon={ShieldCheck} label="Status" value={student.status} />
             <InfoCard icon={Mail} label="Assigned Mentor" value={student.mentor} />
           </div>
@@ -200,8 +192,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
               <StatusPill label={student.flags.some((flag: any) => flag.status === 'open') ? 'At Risk' : student.status} tone={student.flags.some((flag: any) => flag.status === 'open') ? 'warning' : 'info'} />
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <ActionCard label="Edit profile" copy="Update track, cohort, mentor, and access." onClick={openEditor} />
-              <ActionCard label="Move cohort" copy="Choose a different active cohort." onClick={openEditor} />
+              <ActionCard label="Edit profile" copy="Update track, mentor, and access." onClick={openEditor} />
               <ActionCard
                 label={liveStudent.enrollmentStatus === 'suspended' ? 'Restore access' : 'Pause access'}
                 copy="Change whether this student can access the portal."
@@ -305,14 +296,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         </section>
       </div>
 
-      <PortalDialog open={editOpen} onClose={() => setEditOpen(false)} title="Edit Student" description="Update the student's editable backend fields.">
+      <PortalDialog open={editOpen} onClose={() => setEditOpen(false)} title="Edit Student" description="Update the student's profile and access details.">
         <div className="space-y-4">
           <Input value={editForm.programTrack} onChange={(event) => setEditForm((current) => ({ ...current, programTrack: event.target.value }))} placeholder="Program track" />
           <div className="grid gap-4 md:grid-cols-2">
-            <select className="h-12 rounded-md border border-input bg-background px-3 text-sm text-primary outline-none focus:border-accent" value={editForm.cohortId} onChange={(event) => setEditForm((current) => ({ ...current, cohortId: event.target.value }))}>
-              <option value="">Unassigned cohort</option>
-              {(cohorts ?? []).map((cohort) => <option key={cohort._id} value={cohort._id}>{cohort.name}</option>)}
-            </select>
             <select className="h-12 rounded-md border border-input bg-background px-3 text-sm text-primary outline-none focus:border-accent" value={editForm.mentorProfileId} onChange={(event) => setEditForm((current) => ({ ...current, mentorProfileId: event.target.value }))}>
               <option value="">Unassigned mentor</option>
               {mentors.map((mentor) => <option key={mentor._id} value={mentor._id}>{mentor.name} ({mentor.role})</option>)}

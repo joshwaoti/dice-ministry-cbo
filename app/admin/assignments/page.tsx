@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { CheckCircle2, Download, Eye, FileText, MessageSquareMore, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Download, Eye, FileText, MessageSquareMore, RotateCcw, Trash2 } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/toast';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
+import { PortalDialog } from '@/components/portal/PortalDialog';
 
 const PAGE_SIZE = 6;
 
@@ -38,6 +39,7 @@ type ReviewItem = {
 export default function AdminAssignmentsPage() {
   const liveSubmissions = useQuery(api.assignments.listSubmissions, {}) as any[] | undefined;
   const reviewSubmission = useMutation(api.assignments.reviewSubmission);
+  const deleteSubmission = useMutation(api.assignments.deleteSubmission);
   const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
   const createAdminDocument = useMutation(api.documents.createAdminDocument);
   const reviewQueue: ReviewItem[] = liveSubmissions?.map((submission) => ({
@@ -67,6 +69,7 @@ export default function AdminAssignmentsPage() {
   const [page, setPage] = useState(1);
   const [score, setScore] = useState('88 / 100');
   const [feedback, setFeedback] = useState('Strong submission. Your reflection clearly connected grace to daily practice. Tighten the second paragraph and add one more scripture reference before publication.');
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { toast } = useToast();
   const { pageItems, totalPages } = paginate(reviewQueue, page, PAGE_SIZE);
   const selected = reviewQueue.find((item) => item.id === selectedId) ?? reviewQueue[0];
@@ -88,7 +91,7 @@ export default function AdminAssignmentsPage() {
   const handleReview = async (status: 'pass' | 'needs_revision' | 'pending_review') => {
     if (!selected) return;
     await reviewSubmission({ submissionId: selected.id as any, status, grade: score, comment: feedback, notifyStudent: true });
-    toast({ title: status === 'pass' ? 'Submission approved' : 'Submission updated', description: 'The grade and feedback were saved to Convex and published to the learner portal.', tone: status === 'pass' ? 'success' : 'info' });
+    toast({ title: status === 'pass' ? 'Submission approved' : 'Submission updated', description: 'The grade and feedback were saved and published to the learner portal.', tone: status === 'pass' ? 'success' : 'info' });
   };
 
   return (
@@ -164,31 +167,14 @@ export default function AdminAssignmentsPage() {
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-border bg-surface p-4">
                 <p className="text-sm font-semibold text-primary">Student note</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{selected.note}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{selected.note || 'No note added.'}</p>
               </div>
               <div className="rounded-2xl border border-border bg-surface p-4">
-                <p className="text-sm font-semibold text-primary">Submission requirements</p>
-                <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
-                  <li>Accepted formats: {selected.assignment.format}</li>
-                  <li>Due date: {selected.assignment.due}</li>
-                  <li>Expected reflection length: 500-700 words</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-3xl border border-dashed border-border bg-surface p-6">
-              <div className="flex items-start gap-4">
-                <div className="rounded-2xl bg-white p-3 text-accent shadow-sm">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-primary">Submission Summary</h3>
-                  <p className="text-sm text-muted-foreground">Stored submission file and metadata from Convex.</p>
+                <p className="text-sm font-semibold text-primary">Submitted file</p>
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-primary">{selected.fileName ?? 'reflection-essay.pdf'}</span>
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-primary">{selected.size ? `${(selected.size / 1024 / 1024).toFixed(2)} MB` : 'Size unavailable'}</span>
                   </div>
-                </div>
               </div>
             </div>
           </div>
@@ -262,6 +248,9 @@ export default function AdminAssignmentsPage() {
                   </div>
                 ) : null}
                 <div className="flex flex-wrap justify-end gap-3">
+                  <Button variant="outline" onClick={() => setDeleteOpen(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Review
+                  </Button>
                   <Button variant="outline" onClick={() => handleReview('needs_revision')}>
                     <RotateCcw className="mr-2 h-4 w-4" /> Request Resubmission
                   </Button>
@@ -278,6 +267,26 @@ export default function AdminAssignmentsPage() {
         </section>
         ) : null}
       </div>
+      <PortalDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete assignment review" description="This removes the selected submission from the review queue.">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Delete the submission from {selected?.learner.name} for {selected?.assignment.title}? This cannot be undone.</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                if (!selected) return;
+                await deleteSubmission({ submissionId: selected.id as any });
+                setDeleteOpen(false);
+                setSelectedId(null);
+                toast({ title: 'Submission deleted', description: 'The assignment review was removed from the queue.', tone: 'success' });
+              }}
+            >
+              Delete Review
+            </Button>
+          </div>
+        </div>
+      </PortalDialog>
     </div>
   );
 }

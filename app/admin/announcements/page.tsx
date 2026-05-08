@@ -22,7 +22,7 @@ export default function AdminAnnouncementsPage() {
   const [page, setPage] = useState(1);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [audience, setAudience] = useState<'all' | 'students' | 'admins' | 'cohort'>('students');
+  const [audience, setAudience] = useState<'all' | 'students' | 'admins'>('students');
   const [scheduledAt, setScheduledAt] = useState('');
   const { toast } = useToast();
   const liveAnnouncements = useQuery(api.announcements.listAdmin) as any[] | undefined;
@@ -76,7 +76,7 @@ export default function AdminAnnouncementsPage() {
             <EmptyPortalState
               variant="messages"
               title="No announcements yet"
-              description="Create a student, admin, cohort, or public announcement and it will appear here."
+              description="Create a student, admin, or public announcement and it will appear here."
               action={<div className="mt-5"><Button variant="primary" onClick={() => setOpen(true)}><Megaphone className="mr-2 h-4 w-4" /> New Announcement</Button></div>}
             />
           ) : null}
@@ -180,7 +180,6 @@ export default function AdminAnnouncementsPage() {
               <option value="all">Public visitors</option>
               <option value="students">Students</option>
               <option value="admins">All admins</option>
-              <option value="cohort">Cohort</option>
             </select>
             <select className="h-12 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent">
               <option>Channel</option>

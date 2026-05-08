@@ -1,6 +1,6 @@
 'use client';
 
-import { ClipboardCheck, Download, MailQuestion, UserRoundPlus } from 'lucide-react';
+import { ClipboardCheck, Download, LayoutGrid, List, MailQuestion, UserRoundPlus } from 'lucide-react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useState } from 'react';
@@ -29,6 +29,7 @@ type ReviewApplication = {
 export default function AdminApplicationsPage() {
   const { toast } = useToast();
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
   const liveApplications = useQuery(api.applications.list, {}) as any[] | undefined;
   const invitationJobs = useQuery(api.invitations.listJobs, {}) as any[] | undefined;
   const approveApplication = useMutation(api.applications.approve);
@@ -81,7 +82,7 @@ export default function AdminApplicationsPage() {
     });
     toast({
       title: `${application.name} approved`,
-      description: 'A Clerk invitation was queued and processing has started automatically. No Clerk dashboard step is needed.',
+      description: 'An email invitation was queued and processing has started automatically.',
       tone: 'success',
     });
   };
@@ -95,7 +96,7 @@ export default function AdminApplicationsPage() {
         actions={<Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export Applications</Button>}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-6">
         <section className="rounded-3xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-6 py-5">
             <h2 className="font-display text-2xl font-bold text-primary">Review Queue</h2>
@@ -103,19 +104,47 @@ export default function AdminApplicationsPage() {
           <div className="space-y-4 p-4">
             {liveApplications === undefined ? <LoadingPortalState label="Loading applications..." /> : null}
             {liveApplications !== undefined && reviewQueue.length === 0 ? (
-              <EmptyPortalState
-                variant="students"
-                title="No applications yet"
-                description="New Ignite applications submitted from the public form will appear here for review, approval, and automatic Clerk invitation."
-              />
+              <EmptyPortalState variant="students" title="No applications yet" description="New Ignite applications submitted from the public form will appear here for review and approval." />
             ) : null}
-            {pageItems.map((application) => (
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant={view === 'grid' ? 'primary' : 'outline'} onClick={() => setView('grid')}><LayoutGrid className="mr-2 h-4 w-4" /> Grid</Button>
+              <Button size="sm" variant={view === 'list' ? 'primary' : 'outline'} onClick={() => setView('list')}><List className="mr-2 h-4 w-4" /> List</Button>
+            </div>
+            {view === 'list' ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left">
+                  <thead className="bg-surface text-xs font-bold uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3">Applicant</th>
+                      <th className="px-4 py-3">School</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Email Invitation</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {pageItems.map((application) => {
+                      const locked = application.status === 'Approved' || ['queued', 'sending', 'sent', 'accepted'].includes(application.invitation?.status);
+                      return (
+                        <tr key={application.id}>
+                          <td className="px-4 py-3 font-semibold text-primary">{application.name}</td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">{application.school || 'Not provided'}</td>
+                          <td className="px-4 py-3"><StatusPill label={application.status} tone={application.status === 'Approved' ? 'success' : 'warning'} /></td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">{application.invitation?.status ?? (application.status === 'Approved' ? 'queued' : 'not sent')}</td>
+                          <td className="px-4 py-3 text-right"><Button size="sm" variant="primary" disabled={locked} onClick={() => handleApprove(application)}><UserRoundPlus className="mr-2 h-4 w-4" /> Admit</Button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : pageItems.map((application) => (
               <article key={application.id} className="rounded-2xl border border-border p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="font-semibold text-primary">{application.name}</p>
                     <p className="text-sm text-muted-foreground">{application.school}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-accent">{application.id} - {application.track}</p>
+                    <p className="mt-2 text-xs font-semibold uppercase text-accent">{application.track}</p>
                   </div>
                   <StatusPill
                     label={application.status}
@@ -131,9 +160,9 @@ export default function AdminApplicationsPage() {
                   </div>
                 </div>
                 <div className="mt-4 rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
-                  Clerk invitation:{' '}
+                  Email invitation:{' '}
                   <span className="font-semibold text-primary">
-                    {application.invitation?.status ?? (application.status === 'Approved' ? 'queued after live approval' : 'not queued')}
+                    {application.invitation?.status ?? (application.status === 'Approved' ? 'queued' : 'not sent')}
                   </span>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-2">
@@ -173,15 +202,6 @@ export default function AdminApplicationsPage() {
           </div>
           <PaginationControls page={page} totalPages={totalPages} totalItems={reviewQueue.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </section>
-
-        <aside className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-          <h2 className="font-display text-2xl font-bold text-primary">Decision Guide</h2>
-          <div className="mt-5 space-y-4 text-sm text-muted-foreground">
-            <div className="rounded-2xl border border-border px-4 py-3">Confirm the student has uploaded an academic result slip and a recommendation.</div>
-            <div className="rounded-2xl border border-border px-4 py-3">Decide whether the application goes to interview, request-docs, or admit-now status.</div>
-            <div className="rounded-2xl border border-border px-4 py-3">Approved students should be transferred to Student Management with their documents attached.</div>
-          </div>
-        </aside>
       </div>
     </div>
   );

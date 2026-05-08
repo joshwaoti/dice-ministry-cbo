@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { BadgeCheck, BookText, FileText, Pencil, Save, Send, UserRoundSearch } from 'lucide-react';
+import { BadgeCheck, BookText, FileText, Pencil, Save, Send, Trash2, UserRoundSearch } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { PaginationControls, paginate } from '@/components/portal/PaginationControls';
+import { PortalDialog } from '@/components/portal/PortalDialog';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { UploadDropzone } from '@/components/portal/UploadDropzone';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,8 @@ export default function AdminMessagesPage() {
   const sendMessage = useMutation(api.messages.send);
   const updatePublicSubmissionStatus = useMutation(api.publicSubmissions.updateStatus);
   const editMessage = useMutation(api.messages.edit);
+  const deleteMessage = useMutation(api.messages.remove);
+  const deleteConversation = useMutation(api.messages.removeConversation);
   const markRead = useMutation(api.messages.markRead);
   const attachDocument = useMutation(api.messages.attachDocument);
   const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
@@ -35,6 +38,7 @@ export default function AdminMessagesPage() {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState('');
+  const [deleteThreadOpen, setDeleteThreadOpen] = useState(false);
 
   const threads =
     liveConversations?.map((conversation) => ({
@@ -72,7 +76,7 @@ export default function AdminMessagesPage() {
     if (!thread || !reply.trim()) return;
     await sendMessage({ conversationId: thread.id as any, body: reply.trim() });
     setReply('');
-    toast({ title: 'Reply sent', description: 'The conversation update was delivered and logged in Convex.', tone: 'success' });
+    toast({ title: 'Reply sent', description: 'The conversation update was delivered.', tone: 'success' });
   };
 
   return (
@@ -80,7 +84,7 @@ export default function AdminMessagesPage() {
       <PortalPageHeader
         eyebrow="Admin Portal"
         title="Communication Center"
-        description="Manage student communication, message ownership, attachments, edits, and read states from live Convex data."
+        description="Manage student communication, message ownership, attachments, edits, and read states."
       />
 
       <section className="rounded-2xl border border-border bg-white p-5 shadow-sm">
@@ -163,9 +167,12 @@ export default function AdminMessagesPage() {
                 </Button>
                 <Button variant="outline" onClick={async () => {
                   await resolveConversation({ conversationId: thread.id as any });
-                  toast({ title: 'Thread resolved', description: 'The conversation was marked resolved in Convex.', tone: 'success' });
+                  toast({ title: 'Thread resolved', description: 'The conversation was marked resolved.', tone: 'success' });
                 }}>
                   <BadgeCheck className="mr-2 h-4 w-4" /> Resolve
+                </Button>
+                <Button variant="outline" onClick={() => setDeleteThreadOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Thread
                 </Button>
               </div>
             </div>
@@ -181,7 +188,7 @@ export default function AdminMessagesPage() {
                       <Button size="sm" variant="secondary" onClick={async () => {
                         await editMessage({ messageId: message.id as any, body: editingBody });
                         setEditingId(null);
-                        toast({ title: 'Message edited', description: 'Your message was updated in Convex.', tone: 'success' });
+                        toast({ title: 'Message edited', description: 'Your message was updated.', tone: 'success' });
                       }}>
                         <Save className="mr-2 h-4 w-4" /> Save Edit
                       </Button>
@@ -204,6 +211,16 @@ export default function AdminMessagesPage() {
                             <Pencil className="h-3.5 w-3.5" /> Edit
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 font-semibold"
+                          onClick={async () => {
+                            await deleteMessage({ messageId: message.id as any });
+                            toast({ title: 'Message deleted', description: 'The message was removed from this thread.', tone: 'success' });
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </button>
                       </div>
                     </>
                   )}
@@ -251,6 +268,26 @@ export default function AdminMessagesPage() {
           <div className="p-6"><EmptyPortalState variant="messages" title="No thread selected" description="Open a conversation to read, reply, edit your messages, or attach documents." /></div>
         )}
       </div>
+      <PortalDialog open={deleteThreadOpen} onClose={() => setDeleteThreadOpen(false)} title="Delete conversation" description="This removes the selected conversation and its messages.">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Delete this conversation with {thread?.name}? This cannot be undone.</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setDeleteThreadOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                if (!thread) return;
+                await deleteConversation({ conversationId: thread.id as any });
+                setDeleteThreadOpen(false);
+                setSelectedId(null);
+                toast({ title: 'Conversation deleted', description: 'The message thread was removed.', tone: 'success' });
+              }}
+            >
+              Delete Conversation
+            </Button>
+          </div>
+        </div>
+      </PortalDialog>
     </div>
   );
 }

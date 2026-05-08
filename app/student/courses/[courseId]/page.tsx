@@ -11,14 +11,14 @@ import { StatusPill } from '@/components/portal/StatusPill';
 import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 
-function canQueryConvexId(id: string) {
+function canQueryRecordId(id: string) {
   return id.length > 20 && !id.includes('-');
 }
 
 export default function CourseDetail({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
-  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
-  if (canQueryConvexId(courseId) && liveCourse === undefined) {
+  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryRecordId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
+  if (canQueryRecordId(courseId) && liveCourse === undefined) {
     return <LoadingPortalState label="Loading course..." />;
   }
   const course = liveCourse
@@ -46,7 +46,7 @@ export default function CourseDetail({ params }: { params: Promise<{ courseId: s
     : null;
 
   if (!course) {
-    return <EmptyPortalState variant="learning" title="Course not available" description="This course must be assigned from Convex before it can appear in the student portal." />;
+    return <EmptyPortalState variant="learning" title="Course not available" description="This course must be assigned before it can appear in the student portal." />;
   }
 
   return (
@@ -67,7 +67,7 @@ export default function CourseDetail({ params }: { params: Promise<{ courseId: s
       <section className="rounded-[26px] border border-border bg-white p-6 shadow-sm">
         <div className="grid gap-5 md:grid-cols-3">
           <Metric label="Course progress" value={`${course.progress}%`} copy="Visible completion so students always know where they stand." />
-          <Metric label="Modules" value={`${course.moduleCount}`} copy="Structured for predictable navigation and cohort facilitation." />
+          <Metric label="Modules" value={`${course.moduleCount}`} copy="Structured for predictable navigation." />
           <Metric label="Mentor" value={course.mentor} copy="Direct support remains visible from every major course route." />
         </div>
       </section>

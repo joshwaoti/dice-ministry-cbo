@@ -258,3 +258,27 @@ export const reviewSubmission = mutation({
     });
   },
 });
+
+export const deleteSubmission = mutation({
+  args: { submissionId: v.id('submissions') },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx, ['super_admin', 'admin']);
+    const submission = await ctx.db.get(args.submissionId);
+    if (!submission) throw new ConvexError('Submission not found.');
+    const comments = await ctx.db
+      .query('submissionComments')
+      .withIndex('by_submission', (q) => q.eq('submissionId', args.submissionId))
+      .collect();
+    for (const comment of comments) {
+      await ctx.db.delete(comment._id);
+    }
+    await ctx.db.delete(args.submissionId);
+    await writeAudit(ctx, {
+      actorProfileId: actor._id,
+      action: 'assignments.deleteSubmission',
+      targetTable: 'submissions',
+      targetId: args.submissionId,
+      summary: 'Deleted assignment submission review.',
+    });
+  },
+});

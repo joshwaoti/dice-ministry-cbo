@@ -19,13 +19,13 @@ const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor').th
   loading: () => <LoadingPortalState label="Loading editor..." />,
 });
 
-function canQueryConvexId(id: string) {
+function canQueryRecordId(id: string) {
   return id.length > 20 && !id.includes('-');
 }
 
 export default function CourseEditor({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const liveCourse = useQuery(api.courses.getAdminCourse, canQueryConvexId(id) ? { courseId: id as any } : 'skip') as any | undefined;
+  const liveCourse = useQuery(api.courses.getAdminCourse, canQueryRecordId(id) ? { courseId: id as any } : 'skip') as any | undefined;
   const createModule = useMutation(api.courses.createModule);
   const updateModule = useMutation(api.courses.updateModule);
   const deleteModule = useMutation(api.courses.deleteModule);
@@ -50,14 +50,14 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [showPublishDialog, setShowPublishDialog] = useState(false);
 
-  if (!canQueryConvexId(id)) {
-    return <EmptyPortalState variant="learning" title="Live course not found" description="Only Convex-backed courses can be edited in the admin course builder." />;
+  if (!canQueryRecordId(id)) {
+    return <EmptyPortalState variant="learning" title="Course not found" description="Only saved courses can be edited in the course builder." />;
   }
   if (liveCourse === undefined) {
     return <LoadingPortalState label="Loading course editor..." />;
   }
   if (liveCourse === null) {
-    return <EmptyPortalState variant="learning" title="Course not found" description="Create a course in Convex before opening the course builder." />;
+    return <EmptyPortalState variant="learning" title="Course not found" description="Create a course before opening the course builder." />;
   }
 
   const modules = liveCourse?.modules?.map((module: any) => ({
@@ -144,7 +144,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
       setSelectedUnitId(unitId as string);
     }
     setIsEditingUnit(false);
-    toast({ title: 'Unit saved', description: 'The lesson draft was saved to Convex.', tone: 'success' });
+    toast({ title: 'Unit saved', description: 'The lesson draft was saved.', tone: 'success' });
   };
 
   const handleDeleteUnit = async (unitId: string) => {
@@ -350,7 +350,7 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
             accepted="PDF, DOCX, TXT, JPG, PNG"
             accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
             helper="Resources are attached to the selected unit."
-            disabled={!canQueryConvexId(id) || !targetUnitId}
+            disabled={!canQueryRecordId(id) || !targetUnitId}
             generateUploadUrl={generateUploadUrl}
             showSuccessToast={false}
             onUploaded={async (file) => {

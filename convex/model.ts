@@ -77,7 +77,7 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx, allowed: AdminRo
 export function canSeeAdmin(actor: Doc<'profiles'>, target: Doc<'profiles'>) {
   if (actor.role === 'super_admin') return true;
   if (actor.role === 'admin') return target.role !== 'super_admin';
-  if (actor.role === 'moderator') return actor._id === target._id;
+  if (actor.role === 'moderator') return target.role === 'moderator';
   return false;
 }
 

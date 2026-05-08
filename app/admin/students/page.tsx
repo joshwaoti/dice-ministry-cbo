@@ -29,7 +29,6 @@ export default function AdminStudentsPage() {
   const { toast } = useToast();
   const liveStudents = useQuery(api.students.list) as any[] | undefined;
   const liveApplications = useQuery(api.applications.list, {}) as any[] | undefined;
-  const cohorts = useQuery(api.cohorts.list) as any[] | undefined;
   const admins = useQuery(api.adminUsers.list) as any[] | undefined;
   const approveApplication = useMutation(api.applications.approve);
   const submitApplication = useMutation(api.applications.submitApplication);
@@ -43,11 +42,9 @@ export default function AdminStudentsPage() {
   const [selected, setSelected] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [cohortFilter, setCohortFilter] = useState('all');
   const [newStudent, setNewStudent] = useState({ name: '', phone: '', email: '', notes: '' });
   const [editForm, setEditForm] = useState({
     programTrack: 'Ignite',
-    cohortId: '',
     mentorProfileId: '',
     enrollmentStatus: 'active',
   });
@@ -71,8 +68,6 @@ export default function AdminStudentsPage() {
               .toUpperCase() || 'ST',
           name: profile.name ?? 'Unnamed student',
           email: profile.email ?? '',
-          cohort: student.cohort?.name ?? 'Unassigned',
-          cohortId: student.cohortId ?? '',
           progress: student.progressPercent ?? 0,
           status: statusLabels[student.enrollmentStatus] ?? student.enrollmentStatus,
           enrollmentStatus: student.enrollmentStatus,
@@ -89,11 +84,9 @@ export default function AdminStudentsPage() {
   const filteredStudents = useMemo(() => {
     const term = search.trim().toLowerCase();
     return roster.filter((student) => {
-      const matchesTerm = !term || [student.name, student.email, student.mentor, student.cohort, student.track].join(' ').toLowerCase().includes(term);
-      const matchesCohort = cohortFilter === 'all' || student.cohortId === cohortFilter;
-      return matchesTerm && matchesCohort;
+      return !term || [student.name, student.email, student.mentor, student.track].join(' ').toLowerCase().includes(term);
     });
-  }, [cohortFilter, roster, search]);
+  }, [roster, search]);
 
   const applicationQueue = useMemo(
     () =>
@@ -117,7 +110,6 @@ export default function AdminStudentsPage() {
     setSelected(student);
     setEditForm({
       programTrack: student.track,
-      cohortId: student.cohortId,
       mentorProfileId: student.mentorProfileId,
       enrollmentStatus: student.enrollmentStatus,
     });
@@ -135,11 +127,10 @@ export default function AdminStudentsPage() {
     await updateStudent({
       studentProfileId: selected.id,
       programTrack: editForm.programTrack.trim() || 'Ignite',
-      cohortId: editForm.cohortId ? (editForm.cohortId as any) : undefined,
       mentorProfileId: editForm.mentorProfileId ? (editForm.mentorProfileId as any) : undefined,
       enrollmentStatus: editForm.enrollmentStatus as any,
     });
-    toast({ title: 'Student updated', description: `${selected.name}'s profile, cohort, mentor, and access state were saved.`, tone: 'success' });
+    toast({ title: 'Student updated', description: `${selected.name}'s profile, mentor, and access state were saved.`, tone: 'success' });
     setEditOpen(false);
   };
 
@@ -162,7 +153,7 @@ export default function AdminStudentsPage() {
       <PortalPageHeader
         eyebrow="Admin Portal"
         title="Student Management"
-        description="Admit students, assign mentors, manage cohort placement, pause access, and track risk flags from live Convex records."
+        description="Admit students, assign mentors, pause access, and track risk flags."
         actions={
           <Button variant="primary" onClick={() => setNewOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" /> Create Application
@@ -191,28 +182,13 @@ export default function AdminStudentsPage() {
         <div className="flex flex-col gap-4 border-b border-border px-6 py-5 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-display text-2xl font-bold text-primary">Roster</h2>
-            <p className="text-sm text-muted-foreground">Every action here writes to Convex and changes the student record.</p>
+          <p className="text-sm text-muted-foreground">Every action here updates the student record.</p>
           </div>
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9 md:w-72" placeholder="Search students, mentors, cohorts" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <Input className="pl-9 md:w-72" placeholder="Search students or mentors" value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
-            <select
-              className="h-12 rounded-md border border-input bg-background px-3 text-sm text-primary outline-none focus:border-accent"
-              value={cohortFilter}
-              onChange={(event) => {
-                setCohortFilter(event.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              <option value="all">All Cohorts</option>
-              {(cohorts ?? []).map((cohort) => (
-                <option key={cohort._id} value={cohort._id}>
-                  {cohort.name}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -233,7 +209,6 @@ export default function AdminStudentsPage() {
             <thead className="bg-surface">
               <tr className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 <th className="px-6 py-4">Student</th>
-                <th className="px-6 py-4">Cohort</th>
                 <th className="px-6 py-4">Track</th>
                 <th className="px-6 py-4">Mentor</th>
                 <th className="px-6 py-4">Progress</th>
@@ -254,7 +229,6 @@ export default function AdminStudentsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-primary">{student.cohort}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{student.track}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{student.mentor}</td>
                   <td className="px-6 py-4">
@@ -298,7 +272,6 @@ export default function AdminStudentsPage() {
                   <p className="font-semibold text-primary">{student.name}</p>
                   <p className="text-sm text-muted-foreground">{student.email}</p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <Info label="Cohort" value={student.cohort} />
                     <Info label="Track" value={student.track} />
                     <Info label="Mentor" value={student.mentor} />
                     <Info label="Status" value={student.isAtRisk ? 'At Risk' : student.status} />
@@ -352,7 +325,7 @@ export default function AdminStudentsPage() {
                     onClick={async () => {
                       await approveApplication({ applicationId: app.id as any });
                       await processInvitations({ limit: 5 }).catch((error) => console.error('Failed to process invitation queue after admission', error));
-                      toast({ title: 'Student admitted', description: `${app.name} was approved and their Clerk invitation was queued.`, tone: 'success' });
+                      toast({ title: 'Student admitted', description: `${app.name} was approved and their email invitation was queued.`, tone: 'success' });
                     }}
                   >
                     Admit
@@ -364,7 +337,7 @@ export default function AdminStudentsPage() {
         </div>
       </section>
 
-      <PortalDialog open={newOpen} onClose={() => setNewOpen(false)} title="Create Student Application" description="This creates the intake application first. Approval then creates the student profile and sends the Clerk invitation.">
+      <PortalDialog open={newOpen} onClose={() => setNewOpen(false)} title="Create Student Application" description="This creates the intake application first. Approval then creates the student profile and sends the email invitation.">
         <div className="space-y-4">
           <Input placeholder="Student full name" value={newStudent.name} onChange={(event) => setNewStudent((current) => ({ ...current, name: event.target.value }))} />
           <div className="grid gap-4 md:grid-cols-2">
@@ -398,14 +371,10 @@ export default function AdminStudentsPage() {
         </div>
       </PortalDialog>
 
-      <PortalDialog open={editOpen} onClose={() => setEditOpen(false)} title={`Edit ${selected?.name ?? 'student'}`} description="Assign the program track, cohort, mentor, and portal access state.">
+      <PortalDialog open={editOpen} onClose={() => setEditOpen(false)} title={`Edit ${selected?.name ?? 'student'}`} description="Assign the program track, mentor, and portal access state.">
         <div className="space-y-4">
           <Input value={editForm.programTrack} onChange={(event) => setEditForm((current) => ({ ...current, programTrack: event.target.value }))} placeholder="Program track" />
           <div className="grid gap-4 md:grid-cols-2">
-            <select className="h-12 rounded-md border border-input bg-background px-3 text-sm text-primary outline-none focus:border-accent" value={editForm.cohortId} onChange={(event) => setEditForm((current) => ({ ...current, cohortId: event.target.value }))}>
-              <option value="">Unassigned cohort</option>
-              {(cohorts ?? []).map((cohort) => <option key={cohort._id} value={cohort._id}>{cohort.name}</option>)}
-            </select>
             <select className="h-12 rounded-md border border-input bg-background px-3 text-sm text-primary outline-none focus:border-accent" value={editForm.mentorProfileId} onChange={(event) => setEditForm((current) => ({ ...current, mentorProfileId: event.target.value }))}>
               <option value="">Unassigned mentor</option>
               {mentors.map((mentor) => <option key={mentor._id} value={mentor._id}>{mentor.name} ({mentor.role})</option>)}

@@ -45,13 +45,13 @@ export default function AdminSettingsPage() {
     ]);
     setDirty(false);
     setProfileDirty(false);
-    toast({ title: 'Settings updated', description: 'Portal preferences and notification rules were saved to Convex.', tone: 'success' });
+    toast({ title: 'Settings updated', description: 'Portal preferences and notification rules were saved.', tone: 'success' });
   };
 
   const notificationRows = [
     ['applicationSubmitted', 'New Ignite application submitted', 'Email + in-app notification'],
     ['assignmentReview', 'Assignment requires review', 'In-app only, escalates to email after 12 hours'],
-    ['studentAtRisk', 'Student marked at risk', 'Email mentor + cohort lead'],
+    ['studentAtRisk', 'Student marked at risk', 'Email mentor'],
     ['documentUploadAlert', 'Document upload failed compliance checks', 'Admin security alert'],
   ] as const;
 

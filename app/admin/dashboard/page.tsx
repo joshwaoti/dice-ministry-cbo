@@ -85,7 +85,7 @@ export default function AdminDashboard() {
       phone: studentPhone || 'Not provided',
       motivation: 'Created from admin dashboard quick intake.',
     });
-    toast({ title: 'Application created', description: `${studentName} is now in the application review queue. Approve them to send a Clerk invite.`, tone: 'success' });
+    toast({ title: 'Application created', description: `${studentName} is now in the application review queue. Approve them to send an email invitation.`, tone: 'success' });
     setStudentName('');
     setStudentEmail('');
     setStudentPhone('');
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
         open={showAddStudent}
         onClose={() => setShowAddStudent(false)}
         title="Create Application"
-        description="Create an Ignite application record. Approval still happens in the admissions queue before any Clerk invite is sent."
+              description="Create an Ignite application record. Approval still happens in the admissions queue before any email invitation is sent."
       >
         <div className="space-y-4">
           <Input placeholder="Full name" value={studentName} onChange={(e) => setStudentName(e.target.value)} />

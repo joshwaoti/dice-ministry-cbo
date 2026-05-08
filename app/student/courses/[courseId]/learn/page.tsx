@@ -11,13 +11,13 @@ import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { useToast } from '@/components/ui/toast';
 
-function canQueryConvexId(id: string) {
+function canQueryRecordId(id: string) {
   return id.length > 20 && !id.includes('-');
 }
 
 export default function CoursePlayerPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
-  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
+  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryRecordId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
   const saveUnitNote = useMutation(api.courses.saveUnitNote);
   const { toast } = useToast();
   const firstLiveUnit = liveCourse?.modules?.[0]?.units?.[0];
@@ -47,7 +47,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
   const [noteBody, setNoteBody] = useState('');
   const visibleNote = noteBody || note?.body || '';
 
-  if (canQueryConvexId(courseId) && liveCourse === undefined) {
+  if (canQueryRecordId(courseId) && liveCourse === undefined) {
     return <LoadingPortalState label="Loading lesson reader..." />;
   }
   if (!course || !firstLiveUnit) {
@@ -148,7 +148,7 @@ export default function CoursePlayerPage({ params }: { params: Promise<{ courseI
                   onClick={async () => {
                     await saveUnitNote({ courseId: course.id as any, unitId: firstLiveUnit._id as any, body: visibleNote });
                     setNoteBody('');
-                    toast({ title: 'Notes saved', description: 'Your private lesson notes were saved to Convex.', tone: 'success' });
+      toast({ title: 'Notes saved', description: 'Your private lesson notes were saved.', tone: 'success' });
                   }}
                 >
                   <Save className="w-4 h-4 mr-2" /> Save Notes

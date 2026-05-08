@@ -11,16 +11,16 @@ import { LoadingPortalState } from '@/components/portal/LoadingPortalState';
 import { EmptyPortalState } from '@/components/portal/EmptyPortalState';
 import { sanitizeRichText } from '@/lib/richText';
 
-function canQueryConvexId(id: string) {
+function canQueryRecordId(id: string) {
   return id.length > 20 && !id.includes('-');
 }
 
 export default function UnitViewer({ params }: { params: Promise<{ courseId: string; moduleId: string; unitId: string }> }) {
   const { courseId, moduleId, unitId } = use(params);
-  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryConvexId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
+  const liveCourse = useQuery(api.courses.getStudentCourse, canQueryRecordId(courseId) ? { courseId: courseId as any } : 'skip') as any | undefined;
   const markComplete = useMutation(api.courses.markUnitComplete);
   const { toast } = useToast();
-  if (canQueryConvexId(courseId) && liveCourse === undefined) {
+  if (canQueryRecordId(courseId) && liveCourse === undefined) {
     return <LoadingPortalState label="Loading unit..." />;
   }
   const course = liveCourse
@@ -49,7 +49,7 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
   const nextUnit = selectedModule.units[currentIndex + 1];
 
   const handleComplete = async () => {
-    if (canQueryConvexId(courseId)) {
+  if (canQueryRecordId(courseId)) {
       await markComplete({ courseId: courseId as any, moduleId: selectedModule.id as any, unitId: activeUnit.id as any, lastReadPosition: 100 });
     }
     toast({ title: 'Unit marked complete', description: 'Your course progress has been updated.', tone: 'success' });
@@ -57,7 +57,7 @@ export default function UnitViewer({ params }: { params: Promise<{ courseId: str
 
   return (
     <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-sm border border-border overflow-hidden lg:h-[calc(100vh-8rem)] lg:min-h-[600px] w-full max-w-full">
-      {canQueryConvexId(courseId) && liveCourse === undefined ? <LoadingPortalState label="Loading unit..." /> : null}
+      {canQueryRecordId(courseId) && liveCourse === undefined ? <LoadingPortalState label="Loading unit..." /> : null}
       <div className="w-full lg:w-64 border-b lg:border-r lg:border-b-0 border-border p-4 lg:p-6 bg-surface shrink-0 flex flex-col">
         <h3 className="font-bold text-primary mb-2 lg:mb-4 flex pl-2 justify-between items-center text-sm lg:text-base">
           <span>Course Outline</span>
