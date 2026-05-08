@@ -409,6 +409,39 @@ export const saveUnit = mutation({
     if (!canEditCoursework(actor)) throw new ConvexError('You cannot edit coursework.');
     const now = Date.now();
     const richText = args.richText ? sanitizeRichText(args.richText) : undefined;
+    const syncAssignment = async (unitId: Doc<'units'>['_id']) => {
+      const existingAssignments = await ctx.db
+        .query('assignments')
+        .withIndex('by_unit', (q) => q.eq('unitId', unitId))
+        .collect();
+      if (args.type === 'assignment') {
+        const instructions = richText || 'Upload your completed assignment document.';
+        if (existingAssignments.length > 0) {
+          await ctx.db.patch(existingAssignments[0]._id, {
+            title: args.title,
+            instructions,
+            allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
+            maxFileSizeMB: 20,
+            updatedAt: now,
+          });
+          return;
+        }
+        await ctx.db.insert('assignments', {
+          unitId,
+          courseId: args.courseId,
+          title: args.title,
+          instructions,
+          allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
+          maxFileSizeMB: 20,
+          createdAt: now,
+          updatedAt: now,
+        });
+        return;
+      }
+      for (const assignment of existingAssignments) {
+        await ctx.db.delete(assignment._id);
+      }
+    };
     if (args.unitId) {
       await ctx.db.patch(args.unitId, {
         title: args.title,
@@ -418,9 +451,10 @@ export const saveUnit = mutation({
         order: args.order,
         updatedAt: now,
       });
+      await syncAssignment(args.unitId);
       return args.unitId;
     }
-    return await ctx.db.insert('units', {
+    const unitId = await ctx.db.insert('units', {
       courseId: args.courseId,
       moduleId: args.moduleId,
       title: args.title,
@@ -432,6 +466,8 @@ export const saveUnit = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    await syncAssignment(unitId);
+    return unitId;
   },
 });
 

@@ -300,15 +300,30 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
             </div>
             <div className="mt-4 grid gap-4">
               <Input placeholder="Unit title" value={unitTitle} onChange={(event) => setUnitTitle(event.target.value)} />
-              <div className="flex gap-3">
-                <select
-                  value={unitType}
-                  onChange={(e) => setUnitType(e.target.value as 'text' | 'assignment')}
-                  className="h-10 rounded-md border border-input px-3 text-sm text-primary outline-none focus:border-accent"
-                >
-                  <option value="text">Text</option>
-                  <option value="assignment">Assignment</option>
-                </select>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-primary">Unit type</p>
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-white p-1">
+                  {(['text', 'assignment'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setUnitType(type)}
+                      className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                        unitType === type ? 'bg-accent text-white shadow-sm' : 'text-primary hover:bg-surface'
+                      }`}
+                    >
+                      {type === 'text' ? 'Text Lesson' : 'Assignment'}
+                    </button>
+                  ))}
+                </div>
+                {unitType === 'assignment' ? (
+                  <p className="text-xs leading-5 text-muted-foreground">Students will see this in their Assignments tab and can upload PDF, DOC, DOCX, or TXT work.</p>
+                ) : (
+                  <p className="text-xs leading-5 text-muted-foreground">Students will see this as lesson content inside the course.</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-semibold text-primary">Estimated minutes</p>
                 <Input
                   type="number"
                   placeholder="Est. minutes"
@@ -433,6 +448,9 @@ export default function CourseEditor({ params }: { params: Promise<{ id: string 
               <Button variant="outline" onClick={() => toast({ title: 'Use assignment unit', description: 'Create an assignment unit, then students can submit documents from their assignment page.', tone: 'info' })}>
                 <FileUp className="mr-2 h-4 w-4" /> Assignment Help
               </Button>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Saving a unit as Assignment creates the student submission record automatically. Students see it after they are enrolled in this course.
+              </p>
             </div>
           </div>
         </section>

@@ -420,6 +420,49 @@ describe('rich text and uploads', () => {
     const removedSubmissionDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Student Assignments/Student User/Visible Documents/Reflection Upload' });
     expect(removedSubmissionDocs).toHaveLength(0);
   });
+
+  test('creates submittable assignment records when saving assignment units', async () => {
+    const t = testBackend();
+    await seedProfile(t, 'admin');
+    const admin = t.withIdentity(adminIdentity);
+
+    const courseId = await admin.mutation(api.courses.create, {
+      title: 'Assignment Unit Course',
+      synopsis: 'Assignment units should be submittable.',
+    });
+    const moduleId = await admin.mutation(api.courses.createModule, { courseId, title: 'Module One' });
+    const unitId = await admin.mutation(api.courses.saveUnit, {
+      courseId,
+      moduleId,
+      title: 'Reflection Assignment',
+      type: 'assignment',
+      order: 0,
+      richText: '<p>Upload your reflection.</p>',
+      estimatedMinutes: 30,
+    });
+
+    let rows = await t.run(async (ctx) => {
+      return await ctx.db.query('assignments').withIndex('by_unit', (q) => q.eq('unitId', unitId)).collect();
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('Reflection Assignment');
+    expect(rows[0].allowedTypes).toEqual(['pdf', 'doc', 'docx', 'txt']);
+
+    await admin.mutation(api.courses.saveUnit, {
+      courseId,
+      moduleId,
+      unitId,
+      title: 'Reflection Lesson',
+      type: 'text',
+      order: 0,
+      richText: '<p>No upload required.</p>',
+      estimatedMinutes: 30,
+    });
+    rows = await t.run(async (ctx) => {
+      return await ctx.db.query('assignments').withIndex('by_unit', (q) => q.eq('unitId', unitId)).collect();
+    });
+    expect(rows).toHaveLength(0);
+  });
 });
 
 describe('public submissions', () => {
