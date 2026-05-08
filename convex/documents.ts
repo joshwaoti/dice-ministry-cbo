@@ -22,8 +22,30 @@ type LibraryDocument = {
   owner?: Doc<'profiles'> | null;
 };
 
+const librarySourceTable = v.union(
+  v.literal('adminDocuments'),
+  v.literal('studentDocuments'),
+  v.literal('submissions'),
+  v.literal('unitResources'),
+  v.literal('applicationDocuments'),
+  v.literal('messageAttachments'),
+);
+
+const librarySourceId = v.union(
+  v.id('adminDocuments'),
+  v.id('studentDocuments'),
+  v.id('submissions'),
+  v.id('unitResources'),
+  v.id('applicationDocuments'),
+  v.id('messageAttachments'),
+);
+
 function courseFolder(course: Doc<'courses'> | null, rest = 'Course Documents') {
   return `Courses/${course?.title ?? 'Unknown Course'}/${rest}`;
+}
+
+export function assignmentFeedbackFolder(studentName: string, courseTitle: string, assignmentTitle: string) {
+  return `Student Assignments/${studentName}/${courseTitle}/Feedback/${assignmentTitle}`;
 }
 
 function normalizeFolderPath(path: string) {
@@ -379,6 +401,158 @@ export const removeAdminDocument = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, ['super_admin', 'admin']);
     await ctx.db.delete(args.documentId);
+  },
+});
+
+export const updateLibraryDocument = mutation({
+  args: {
+    sourceTable: librarySourceTable,
+    sourceId: librarySourceId,
+    name: v.optional(v.string()),
+    category: v.optional(v.string()),
+    access: v.optional(v.union(v.literal('admin_only'), v.literal('instructors'), v.literal('admin_team'), v.literal('students'))),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const now = Date.now();
+    if (args.sourceTable === 'adminDocuments') {
+      await ctx.db.patch(args.sourceId as any, {
+        name: args.name,
+        category: args.category,
+        access: args.access,
+        updatedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'studentDocuments') {
+      await ctx.db.patch(args.sourceId as any, {
+        fileName: args.name,
+        category: args.category,
+        uploadedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'submissions') {
+      await ctx.db.patch(args.sourceId as any, {
+        fileName: args.name,
+        notes: args.notes,
+        updatedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'unitResources') {
+      await ctx.db.patch(args.sourceId as any, {
+        fileName: args.name,
+        uploadedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'applicationDocuments') {
+      await ctx.db.patch(args.sourceId as any, {
+        fileName: args.name,
+        category: args.category,
+        uploadedAt: now,
+      });
+      return;
+    }
+    await ctx.db.patch(args.sourceId as any, {
+      fileName: args.name,
+      uploadedAt: now,
+    });
+  },
+});
+
+export const replaceLibraryDocumentFile = mutation({
+  args: {
+    sourceTable: librarySourceTable,
+    sourceId: librarySourceId,
+    storageId: v.id('_storage'),
+    fileName: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    assertDocumentContentType(args.contentType);
+    assertDocumentSize(args.size);
+    const now = Date.now();
+    if (args.sourceTable === 'adminDocuments') {
+      await ctx.db.patch(args.sourceId as any, {
+        storageId: args.storageId,
+        fileName: args.fileName,
+        name: args.fileName,
+        contentType: args.contentType as any,
+        size: args.size,
+        updatedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'studentDocuments') {
+      await ctx.db.patch(args.sourceId as any, {
+        storageId: args.storageId,
+        fileName: args.fileName,
+        contentType: args.contentType as any,
+        size: args.size,
+        uploadedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'submissions') {
+      await ctx.db.patch(args.sourceId as any, {
+        storageId: args.storageId,
+        fileName: args.fileName,
+        contentType: args.contentType as any,
+        size: args.size,
+        status: 'pending_review',
+        submittedAt: now,
+        updatedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'unitResources') {
+      await ctx.db.patch(args.sourceId as any, {
+        storageId: args.storageId,
+        fileName: args.fileName,
+        contentType: args.contentType as any,
+        size: args.size,
+        uploadedAt: now,
+      });
+      return;
+    }
+    if (args.sourceTable === 'applicationDocuments') {
+      await ctx.db.patch(args.sourceId as any, {
+        storageId: args.storageId,
+        fileName: args.fileName,
+        contentType: args.contentType as any,
+        size: args.size,
+        uploadedAt: now,
+      });
+      return;
+    }
+    await ctx.db.patch(args.sourceId as any, {
+      storageId: args.storageId,
+      fileName: args.fileName,
+      contentType: args.contentType as any,
+      size: args.size,
+      uploadedAt: now,
+    });
+  },
+});
+
+export const removeLibraryDocument = mutation({
+  args: {
+    sourceTable: librarySourceTable,
+    sourceId: librarySourceId,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, ['super_admin', 'admin']);
+    if (args.sourceTable === 'adminDocuments') await ctx.db.delete(args.sourceId as any);
+    if (args.sourceTable === 'studentDocuments') await ctx.db.delete(args.sourceId as any);
+    if (args.sourceTable === 'submissions') await ctx.db.delete(args.sourceId as any);
+    if (args.sourceTable === 'unitResources') await ctx.db.delete(args.sourceId as any);
+    if (args.sourceTable === 'applicationDocuments') await ctx.db.delete(args.sourceId as any);
+    if (args.sourceTable === 'messageAttachments') await ctx.db.delete(args.sourceId as any);
   },
 });
 

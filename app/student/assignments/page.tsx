@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { FileUp, Send, ShieldCheck } from 'lucide-react';
+import { Download, FileText, FileUp, Send, ShieldCheck } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { PortalPageHeader } from '@/components/portal/PortalPageHeader';
 import { StatusPill } from '@/components/portal/StatusPill';
@@ -34,6 +34,8 @@ export default function StudentAssignments() {
       accepted: assignment.allowedTypes?.join(', ').toUpperCase() ?? 'PDF, DOC, DOCX, TXT',
       status,
       grade: assignment.submission?.grade ?? 'Pending',
+      submission: assignment.submission,
+      feedbackDocuments: assignment.feedbackDocuments ?? [],
       isLive: true,
     };
   }) ?? [];
@@ -106,6 +108,40 @@ export default function StudentAssignments() {
                     ) : null}
                   </div>
                 </div>
+                {assignment.submission || assignment.feedbackDocuments.length > 0 ? (
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {assignment.submission ? (
+                      <div className="rounded-2xl border border-border bg-surface p-4">
+                        <div className="flex items-start gap-3">
+                          <FileText className="mt-1 h-5 w-5 shrink-0 text-accent" />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-primary">Your submitted file</p>
+                            <p className="mt-1 break-words text-sm text-muted-foreground">{assignment.submission.fileName}</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <AssignmentDownloadButton storageId={assignment.submission.storageId} label="Download" />
+                              <Button size="sm" variant="outline" onClick={() => setSelectedAssignmentId(assignment.id)}>
+                                <FileUp className="mr-2 h-3.5 w-3.5" /> Replace
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                    {assignment.feedbackDocuments.length > 0 ? (
+                      <div className="rounded-2xl border border-border bg-emerald-50 p-4">
+                        <p className="font-semibold text-emerald-900">Teacher feedback files</p>
+                        <div className="mt-3 space-y-2">
+                          {assignment.feedbackDocuments.map((document: any) => (
+                            <div key={document._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-sm">
+                              <span className="break-words font-medium text-primary">{document.fileName || document.name}</span>
+                              <AssignmentDownloadButton storageId={document.storageId} label="Download" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -151,5 +187,21 @@ export default function StudentAssignments() {
         </aside>
       </div>
     </div>
+  );
+}
+
+function AssignmentDownloadButton({ storageId, label }: { storageId?: string; label: string }) {
+  const url = useQuery(api.documents.getUrl, storageId ? { storageId: storageId as any } : 'skip') as string | null | undefined;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={!url}
+      onClick={() => {
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }}
+    >
+      <Download className="mr-2 h-3.5 w-3.5" /> {label}
+    </Button>
   );
 }

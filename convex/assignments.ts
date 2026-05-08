@@ -2,6 +2,7 @@ import { ConvexError, v } from 'convex/values';
 import { Doc } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 import { assertDocumentContentType, assertDocumentSize, canGrade, requireAdmin, requireStudent, writeAudit } from './model';
+import { assignmentFeedbackFolder } from './documents';
 
 export const listForStudent = query({
   args: {},
@@ -21,10 +22,16 @@ export const listForStudent = query({
       for (const assignment of courseAssignments) {
         const submission = await ctx.db
           .query('submissions')
-          .withIndex('by_assignment', (q) => q.eq('assignmentId', assignment._id))
-          .filter((q) => q.eq(q.field('studentProfileId'), studentProfile._id))
-          .first();
-        assignments.push({ ...assignment, course, submission });
+          .withIndex('by_assignment_and_student', (q) => q.eq('assignmentId', assignment._id).eq('studentProfileId', studentProfile._id))
+          .unique();
+        const profile = await ctx.db.get(studentProfile.profileId);
+        const feedbackDocuments = profile && course
+          ? await ctx.db
+            .query('adminDocuments')
+            .withIndex('by_source_path', (q) => q.eq('sourcePath', assignmentFeedbackFolder(profile.name, course.title, assignment.title)))
+            .collect()
+          : [];
+        assignments.push({ ...assignment, course, submission, feedbackDocuments });
       }
     }
     return assignments;
@@ -43,11 +50,17 @@ export const listSubmissions = query({
       const studentProfile = await ctx.db.get(submission.studentProfileId);
       const profile = studentProfile ? await ctx.db.get(studentProfile.profileId) : null;
       const course = assignment ? await ctx.db.get(assignment.courseId) : null;
+      const feedbackDocuments = assignment && course && profile
+        ? await ctx.db
+          .query('adminDocuments')
+          .withIndex('by_source_path', (q) => q.eq('sourcePath', assignmentFeedbackFolder(profile.name, course.title, assignment.title)))
+          .collect()
+        : [];
       const comments = await ctx.db
         .query('submissionComments')
         .withIndex('by_submission', (q) => q.eq('submissionId', submission._id))
         .collect();
-      return { ...submission, assignment, course, studentProfile, profile, comments };
+      return { ...submission, assignment, course, studentProfile, profile, comments, feedbackDocuments };
     };
     if (args.status) {
       const submissions = await ctx.db.query('submissions').withIndex('by_status', (q) => q.eq('status', args.status!)).collect();
@@ -81,9 +94,8 @@ export const submit = mutation({
     const now = Date.now();
     const existing = await ctx.db
       .query('submissions')
-      .withIndex('by_assignment', (q) => q.eq('assignmentId', args.assignmentId))
-      .filter((q) => q.eq(q.field('studentProfileId'), studentProfile._id))
-      .first();
+      .withIndex('by_assignment_and_student', (q) => q.eq('assignmentId', args.assignmentId).eq('studentProfileId', studentProfile._id))
+      .unique();
 
     if (existing) {
       await ctx.db.patch(existing._id, {

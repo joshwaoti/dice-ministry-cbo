@@ -16,6 +16,10 @@ import { PaginationControls, paginate } from '@/components/portal/PaginationCont
 
 const PAGE_SIZE = 6;
 
+function assignmentFeedbackFolder(studentName: string, courseTitle: string, assignmentTitle: string) {
+  return `Student Assignments/${studentName}/${courseTitle}/Feedback/${assignmentTitle}`;
+}
+
 type ReviewItem = {
   id: string;
   learner: { id: string; name: string };
@@ -27,6 +31,7 @@ type ReviewItem = {
   storageId?: string;
   size?: number;
   status: string;
+  feedbackDocuments: any[];
   isLive: boolean;
 };
 
@@ -55,6 +60,7 @@ export default function AdminAssignmentsPage() {
     storageId: submission.storageId,
     size: submission.size,
     status: submission.status,
+    feedbackDocuments: submission.feedbackDocuments ?? [],
     isLive: true,
   })) ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -230,17 +236,31 @@ export default function AdminAssignmentsPage() {
                   onUploaded={async (file) => {
                     await createAdminDocument({
                       name: `${selected.learner.name} - ${file.fileName}`,
-                      category: 'assignment_feedback',
-                      access: 'admin_team',
+                      category: 'Student Assignment Feedback',
+                      access: 'students',
                       storageId: file.storageId as any,
                       fileName: file.fileName,
                       contentType: file.contentType,
                       size: file.size,
+                      sourcePath: assignmentFeedbackFolder(selected.learner.name, selected.assignment.course, selected.assignment.title),
                     });
-                    toast({ title: 'Feedback file saved', description: `${file.fileName} was added to the admin document library.`, tone: 'success' });
+                    toast({ title: 'Feedback file saved', description: `${file.fileName} is attached to this assignment and visible to the student.`, tone: 'success' });
                   }}
-                  helper="Feedback files are stored in Convex document storage and cataloged in the admin library."
+                  helper="Feedback files are stored under this student and assignment, and are visible in the learner portal."
                 />
+                {selected.feedbackDocuments.length > 0 ? (
+                  <div className="rounded-2xl border border-border bg-surface p-4">
+                    <p className="text-sm font-semibold text-primary">Attached feedback files</p>
+                    <div className="mt-3 space-y-2">
+                      {selected.feedbackDocuments.map((document: any) => (
+                        <div key={document._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-sm">
+                          <span className="font-medium text-primary">{document.fileName || document.name}</span>
+                          <SubmissionDownloadButton storageId={document.storageId} label="Download" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap justify-end gap-3">
                   <Button variant="outline" onClick={() => handleReview('needs_revision')}>
                     <RotateCcw className="mr-2 h-4 w-4" /> Request Resubmission

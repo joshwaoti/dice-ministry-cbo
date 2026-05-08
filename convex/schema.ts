@@ -337,6 +337,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index('by_assignment', ['assignmentId'])
+    .index('by_assignment_and_student', ['assignmentId', 'studentProfileId'])
     .index('by_student', ['studentProfileId'])
     .index('by_status', ['status'])
     .index('by_storage_id', ['storageId']),

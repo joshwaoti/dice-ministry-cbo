@@ -52,8 +52,9 @@ export default function AdminDocumentsPage() {
   const folders = useQuery(api.documents.listDocumentFolders) as any[] | undefined;
   const liveDocuments = useQuery(api.documents.listAdminLibrary, selectedFolder ? { sourcePath: selectedFolder } : {}) as any[] | undefined;
   const createDocument = useMutation(api.documents.createAdminDocument);
-  const updateDocument = useMutation(api.documents.updateAdminDocument);
-  const removeDocument = useMutation(api.documents.removeAdminDocument);
+  const updateDocument = useMutation(api.documents.updateLibraryDocument);
+  const removeDocument = useMutation(api.documents.removeLibraryDocument);
+  const replaceDocumentFile = useMutation(api.documents.replaceLibraryDocumentFile);
   const generateUploadUrl = useMutation(api.documents.generateAdminUploadUrl);
 
   const filteredDocuments = liveDocuments?.filter((doc: any) => {
@@ -79,9 +80,20 @@ export default function AdminDocumentsPage() {
 
   const handleSaveEdit = async () => {
     if (!editDoc) return;
-    await updateDocument({ documentId: editDoc._id as any, name: editName, category: editCategory });
+    await updateDocument({
+      sourceTable: editDoc.sourceTable,
+      sourceId: editDoc.sourceId as any,
+      name: editName,
+      category: editCategory,
+      notes: editDoc.notes,
+    });
     setEditDoc(null);
     toast({ title: 'Document updated', tone: 'success' });
+  };
+
+  const handleRemoveDocument = async (document: any) => {
+    await removeDocument({ sourceTable: document.sourceTable, sourceId: document.sourceId as any });
+    toast({ title: 'Document removed', description: `${getDocumentLabel(document)} was removed.`, tone: 'warning' });
   };
 
   const currentFolderName = selectedFolder
@@ -229,23 +241,23 @@ export default function AdminDocumentsPage() {
                       <td className="px-5 py-4 text-sm text-muted-foreground">{new Date(document.updatedAt).toLocaleDateString()}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
-                          {document.sourceTable === 'adminDocuments' ? (
-                            <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(document.name); setEditCategory(document.category); }}>Edit</Button>
-                          ) : null}
+                          <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(getDocumentLabel(document)); setEditCategory(document.category); }}>Edit</Button>
                           <DocumentDownloadButton storageId={document.storageId} />
-                          {document.sourceTable === 'adminDocuments' ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={async () => {
-                                await removeDocument({ documentId: document._id as any });
-                                toast({ title: 'Document removed', description: `${document.name} was removed.`, tone: 'warning' });
-                              }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditDoc({ ...document, replaceMode: true })}
+                          >
+                            Replace
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRemoveDocument(document)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -272,13 +284,10 @@ export default function AdminDocumentsPage() {
                     </div>
                   </div>
                   <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:flex min-[420px]:flex-wrap">
-                    {document.sourceTable === 'adminDocuments' ? (
-                      <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(document.name); setEditCategory(document.category); }}>Edit</Button>
-                    ) : null}
+                    <Button size="sm" variant="outline" onClick={() => { setEditDoc(document); setEditName(getDocumentLabel(document)); setEditCategory(document.category); }}>Edit</Button>
                     <DocumentDownloadButton storageId={document.storageId} />
-                    {document.sourceTable === 'adminDocuments' ? (
-                      <Button size="sm" variant="outline" onClick={async () => { await removeDocument({ documentId: document._id as any }); toast({ title: 'Removed', tone: 'warning' }); }}>Delete</Button>
-                    ) : null}
+                    <Button size="sm" variant="outline" onClick={() => setEditDoc({ ...document, replaceMode: true })}>Replace</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleRemoveDocument(document)}>Delete</Button>
                   </div>
                 </article>
               ))}
@@ -306,17 +315,40 @@ export default function AdminDocumentsPage() {
       <PortalDialog
         open={!!editDoc}
         onClose={() => setEditDoc(null)}
-        title="Edit Document"
-        description="Update the document metadata."
+        title={editDoc?.replaceMode ? 'Replace Document File' : 'Edit Document'}
+        description={editDoc?.replaceMode ? 'Upload a new file for this document record.' : 'Update the document metadata.'}
       >
-        <div className="space-y-4">
-          <Input placeholder="Document name" value={editName} onChange={(e) => setEditName(e.target.value)} />
-          <Textarea placeholder="Category / folder" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setEditDoc(null)}>Cancel</Button>
-            <Button variant="primary" onClick={handleSaveEdit}>Save</Button>
+        {editDoc?.replaceMode ? (
+          <UploadDropzone
+            title="Replacement file"
+            description="The existing document record will point to this new file after upload."
+            accepted="PDF, DOCX, XLSX, images up to 20MB"
+            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.xlsx,.pptx"
+            generateUploadUrl={generateUploadUrl}
+            showSuccessToast={false}
+            onUploaded={async (file) => {
+              await replaceDocumentFile({
+                sourceTable: editDoc.sourceTable,
+                sourceId: editDoc.sourceId as any,
+                storageId: file.storageId as any,
+                fileName: file.fileName,
+                contentType: file.contentType,
+                size: file.size,
+              });
+              setEditDoc(null);
+              toast({ title: 'Document replaced', description: `${file.fileName} is now attached.`, tone: 'success' });
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            <Input placeholder="Document name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            <Textarea placeholder="Category / folder" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setEditDoc(null)}>Cancel</Button>
+              <Button variant="primary" onClick={handleSaveEdit}>Save</Button>
+            </div>
           </div>
-        </div>
+        )}
       </PortalDialog>
     </div>
   );

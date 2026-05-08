@@ -299,11 +299,13 @@ describe('rich text and uploads', () => {
     const admin = t.withIdentity(adminIdentity);
     const student = t.withIdentity(studentIdentity);
 
-    const [courseFileId, unitFileId, submissionFileId] = await t.run(async (ctx) => {
+    const [courseFileId, unitFileId, submissionFileId, feedbackFileId, replacementFileId] = await t.run(async (ctx) => {
       return await Promise.all([
         ctx.storage.store(new Blob(['course handbook'], { type: 'application/pdf' })),
         ctx.storage.store(new Blob(['unit worksheet'], { type: 'application/pdf' })),
         ctx.storage.store(new Blob(['student work'], { type: 'application/pdf' })),
+        ctx.storage.store(new Blob(['teacher feedback'], { type: 'application/pdf' })),
+        ctx.storage.store(new Blob(['replacement work'], { type: 'application/pdf' })),
       ]);
     });
 
@@ -376,6 +378,47 @@ describe('rich text and uploads', () => {
     expect(courseDocs.map((doc) => doc.fileName)).toContain('course-handbook.pdf');
     const submissionDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Student Assignments/Student User/Visible Documents/Reflection Upload' });
     expect(submissionDocs[0].name).toContain('Student User - Reflection Upload - student-reflection.pdf');
+
+    const feedbackPath = 'Student Assignments/Student User/Visible Documents/Feedback/Reflection Upload';
+    await admin.mutation(api.documents.createAdminDocument, {
+      name: 'Student User - teacher-feedback.pdf',
+      category: 'Student Assignment Feedback',
+      access: 'students',
+      storageId: feedbackFileId,
+      fileName: 'teacher-feedback.pdf',
+      contentType: 'application/pdf',
+      size: 1024,
+      sourcePath: feedbackPath,
+    });
+    const assignments = await student.query(api.assignments.listForStudent, {});
+    expect(assignments[0].feedbackDocuments.map((doc: Doc<'adminDocuments'>) => doc.fileName)).toContain('teacher-feedback.pdf');
+
+    await admin.mutation(api.documents.updateLibraryDocument, {
+      sourceTable: 'submissions',
+      sourceId: submissionDocs[0].sourceId as Id<'submissions'>,
+      name: 'renamed-reflection.pdf',
+      notes: 'Reviewed by admin.',
+    });
+    let updatedSubmissionDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Student Assignments/Student User/Visible Documents/Reflection Upload' });
+    expect(updatedSubmissionDocs[0].fileName).toBe('renamed-reflection.pdf');
+
+    await admin.mutation(api.documents.replaceLibraryDocumentFile, {
+      sourceTable: 'submissions',
+      sourceId: submissionDocs[0].sourceId as Id<'submissions'>,
+      storageId: replacementFileId,
+      fileName: 'replacement-reflection.pdf',
+      contentType: 'application/pdf',
+      size: 2048,
+    });
+    updatedSubmissionDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Student Assignments/Student User/Visible Documents/Reflection Upload' });
+    expect(updatedSubmissionDocs[0].fileName).toBe('replacement-reflection.pdf');
+
+    await admin.mutation(api.documents.removeLibraryDocument, {
+      sourceTable: 'submissions',
+      sourceId: submissionDocs[0].sourceId as Id<'submissions'>,
+    });
+    const removedSubmissionDocs = await admin.query(api.documents.listAdminLibrary, { sourcePath: 'Student Assignments/Student User/Visible Documents/Reflection Upload' });
+    expect(removedSubmissionDocs).toHaveLength(0);
   });
 });
 
