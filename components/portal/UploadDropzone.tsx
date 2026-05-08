@@ -16,6 +16,7 @@ export function UploadDropzone({
   generateUploadUrl,
   onUploaded,
   disabled,
+  disabledReason,
   showSuccessToast = true,
 }: {
   title: string;
@@ -27,6 +28,7 @@ export function UploadDropzone({
   generateUploadUrl?: () => Promise<string>;
   onUploaded?: (file: { storageId: string; fileName: string; contentType: string; size: number }) => Promise<void> | void;
   disabled?: boolean;
+  disabledReason?: string;
   showSuccessToast?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +103,18 @@ export function UploadDropzone({
     }
   };
 
+  const handleChooseFiles = () => {
+    if (disabled) {
+      toast({
+        title: 'Upload unavailable',
+        description: disabledReason ?? 'This upload area is not ready yet. Complete the required step first.',
+        tone: 'warning',
+      });
+      return;
+    }
+    inputRef.current?.click();
+  };
+
   return (
     <div className="rounded-2xl border border-dashed border-accent/35 bg-accent/5 p-4 sm:p-6">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -121,9 +135,12 @@ export function UploadDropzone({
         </div>
         <button
           type="button"
-          disabled={disabled || uploading}
-          onClick={() => inputRef.current?.click()}
-          className="w-full rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent/90 md:w-auto"
+          disabled={uploading}
+          aria-disabled={disabled || uploading}
+          onClick={handleChooseFiles}
+          className={`w-full rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent/90 md:w-auto ${
+            disabled ? 'cursor-not-allowed opacity-70' : ''
+          }`}
         >
           {uploading ? <LoadingSpinner label="Uploading..." className="justify-center text-white" /> : 'Choose Files'}
         </button>

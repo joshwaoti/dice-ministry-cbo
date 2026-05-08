@@ -41,6 +41,7 @@ export default function StudentAssignments() {
   }) ?? [];
   const visibleAssignments = assignments.filter((assignment) => assignment.status === activeTab);
   const { pageItems, totalPages } = paginate(visibleAssignments, page, PAGE_SIZE);
+  const selectedAssignment = assignments.find((assignment) => assignment.id === selectedAssignmentId);
 
   return (
     <div className="space-y-8 max-w-full pb-10">
@@ -92,12 +93,16 @@ export default function StudentAssignments() {
                     {assignment.status === 'Pending' ? (
                       <Button variant="primary" onClick={() => {
                         setSelectedAssignmentId(assignment.id);
+                        toast({ title: 'Assignment selected', description: `You can now choose a file for ${assignment.title}.`, tone: 'info' });
                       }}>
                         <FileUp className="mr-2 h-4 w-4" /> Submit Assignment
                       </Button>
                     ) : null}
                     {assignment.status === 'Submitted' ? (
-                      <Button variant="outline" onClick={() => setSelectedAssignmentId(assignment.id)}>
+                      <Button variant="outline" onClick={() => {
+                        setSelectedAssignmentId(assignment.id);
+                        toast({ title: 'Assignment selected', description: `You can now upload a replacement for ${assignment.title}.`, tone: 'info' });
+                      }}>
                         <Send className="mr-2 h-4 w-4" /> Resubmit Work
                       </Button>
                     ) : null}
@@ -119,7 +124,10 @@ export default function StudentAssignments() {
                             <p className="mt-1 break-words text-sm text-muted-foreground">{assignment.submission.fileName}</p>
                             <div className="mt-3 flex flex-wrap gap-2">
                               <AssignmentDownloadButton storageId={assignment.submission.storageId} label="Download" />
-                              <Button size="sm" variant="outline" onClick={() => setSelectedAssignmentId(assignment.id)}>
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setSelectedAssignmentId(assignment.id);
+                                toast({ title: 'Assignment selected', description: `You can now upload a replacement for ${assignment.title}.`, tone: 'info' });
+                              }}>
                                 <FileUp className="mr-2 h-3.5 w-3.5" /> Replace
                               </Button>
                             </div>
@@ -154,10 +162,11 @@ export default function StudentAssignments() {
             <div className="mt-5">
               <UploadDropzone
                 title="Assignment files"
-                description={selectedAssignmentId ? 'Upload PDFs, Word documents, or text files for the selected assignment.' : 'Choose Submit Assignment on the left before selecting a file.'}
+                description={selectedAssignment ? `Selected: ${selectedAssignment.title}` : 'Choose Submit Assignment on the left before selecting a file.'}
                 accepted="PDF, DOC, DOCX, TXT"
                 accept=".pdf,.doc,.docx,.txt"
                 disabled={!selectedAssignmentId}
+                disabledReason="Select a specific assignment first by clicking Submit Assignment, Resubmit Work, or Replace on an assignment card."
                 generateUploadUrl={generateUploadUrl}
                 onUploaded={async (file) => {
                   if (!selectedAssignmentId) return;
@@ -171,7 +180,7 @@ export default function StudentAssignments() {
                   });
                   setSelectedAssignmentId(null);
                 }}
-                helper="A confirmation toast fires on upload actions so students receive immediate feedback."
+                helper="Required: active student profile, active course enrollment, an assignment on that course, and a selected assignment before choosing a PDF, DOC, DOCX, or TXT file."
               />
             </div>
           </div>
