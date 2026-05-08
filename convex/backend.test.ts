@@ -463,6 +463,58 @@ describe('rich text and uploads', () => {
     });
     expect(rows).toHaveLength(0);
   });
+
+  test('students see legacy assignment units even when assignment rows are missing', async () => {
+    const t = testBackend();
+    const { profileId: adminProfileId } = await seedProfile(t, 'admin');
+    const { studentProfileId } = await seedProfile(t, 'student');
+    const student = t.withIdentity(studentIdentity);
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const courseId = await ctx.db.insert('courses', {
+        title: 'Legacy Assignment Course',
+        slug: 'legacy-assignment-course',
+        synopsis: 'Course has an assignment unit only.',
+        status: 'published',
+        createdBy: adminProfileId,
+        updatedBy: adminProfileId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const moduleId = await ctx.db.insert('modules', {
+        courseId,
+        title: 'Legacy Module',
+        order: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert('units', {
+        courseId,
+        moduleId,
+        title: 'Legacy Reflection',
+        order: 0,
+        type: 'assignment',
+        richText: '<p>Submit this legacy task.</p>',
+        status: 'published',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert('enrollments', {
+        studentProfileId: studentProfileId!,
+        courseId,
+        assignedBy: adminProfileId,
+        status: 'active',
+        progressPercent: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const rows = await student.query(api.assignments.listForStudent, {});
+    expect(rows.map((row) => row.title)).toContain('Legacy Reflection');
+    expect((rows.find((row) => row.title === 'Legacy Reflection') as any)?.isVirtualAssignment).toBe(true);
+  });
 });
 
 describe('public submissions', () => {

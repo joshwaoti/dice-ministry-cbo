@@ -19,11 +19,36 @@ export const listForStudent = query({
         .query('assignments')
         .withIndex('by_course', (q) => q.eq('courseId', enrollment.courseId))
         .collect();
-      for (const assignment of courseAssignments) {
+      const courseUnits = await ctx.db
+        .query('units')
+        .withIndex('by_course', (q) => q.eq('courseId', enrollment.courseId))
+        .collect();
+      const assignmentUnits = courseUnits.filter((unit) => unit.type === 'assignment');
+      const assignmentsByUnit = new Map(courseAssignments.map((assignment) => [assignment.unitId, assignment]));
+      const visibleAssignments = [
+        ...courseAssignments,
+        ...assignmentUnits
+          .filter((unit) => !assignmentsByUnit.has(unit._id))
+          .map((unit) => ({
+            _id: unit._id,
+            _creationTime: unit._creationTime,
+            unitId: unit._id,
+            courseId: unit.courseId,
+            title: unit.title,
+            instructions: unit.richText ?? 'Upload your completed assignment document.',
+            allowedTypes: ['pdf', 'doc', 'docx', 'txt'] as Array<'pdf' | 'doc' | 'docx' | 'txt'>,
+            maxFileSizeMB: 20,
+            createdAt: unit.createdAt,
+            updatedAt: unit.updatedAt,
+            isVirtualAssignment: true,
+          })),
+      ];
+      for (const assignment of visibleAssignments) {
         const submission = await ctx.db
           .query('submissions')
-          .withIndex('by_assignment_and_student', (q) => q.eq('assignmentId', assignment._id).eq('studentProfileId', studentProfile._id))
-          .unique();
+          .withIndex('by_student', (q) => q.eq('studentProfileId', studentProfile._id))
+          .collect()
+          .then((rows) => rows.find((submission) => String(submission.assignmentId) === String(assignment._id) || String(submission.assignmentId) === String(assignment.unitId)));
         const profile = await ctx.db.get(studentProfile.profileId);
         const feedbackDocuments = profile && course
           ? await ctx.db
@@ -73,7 +98,7 @@ export const listSubmissions = query({
 
 export const submit = mutation({
   args: {
-    assignmentId: v.id('assignments'),
+    assignmentId: v.union(v.id('assignments'), v.id('units')),
     storageId: v.id('_storage'),
     fileName: v.string(),
     contentType: v.string(),
@@ -87,14 +112,48 @@ export const submit = mutation({
     if (args.contentType.startsWith('image/') || args.contentType.includes('spreadsheet') || args.contentType.includes('presentation')) {
       throw new ConvexError('Assignment submissions must be PDF, DOC, DOCX, or TXT documents.');
     }
-    const assignment = await ctx.db.get(args.assignmentId);
-    if (!assignment) throw new ConvexError('Assignment not found.');
+    let assignment = await ctx.db.get(args.assignmentId as any) as Doc<'assignments'> | null;
+    if (!assignment) {
+      const unit = await ctx.db.get(args.assignmentId as any) as Doc<'units'> | null;
+      if (!unit || unit.type !== 'assignment') throw new ConvexError('Assignment not found.');
+      const now = Date.now();
+      const existingForUnit = await ctx.db
+        .query('assignments')
+        .withIndex('by_unit', (q) => q.eq('unitId', unit._id))
+        .first();
+      assignment = existingForUnit ?? {
+        _id: await ctx.db.insert('assignments', {
+          unitId: unit._id,
+          courseId: unit.courseId,
+          title: unit.title,
+          instructions: unit.richText ?? 'Upload your completed assignment document.',
+          allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
+          maxFileSizeMB: 20,
+          createdAt: now,
+          updatedAt: now,
+        }),
+        _creationTime: now,
+        unitId: unit._id,
+        courseId: unit.courseId,
+        title: unit.title,
+        instructions: unit.richText ?? 'Upload your completed assignment document.',
+        allowedTypes: ['pdf', 'doc', 'docx', 'txt'],
+        maxFileSizeMB: 20,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+    const enrollment = await ctx.db
+      .query('enrollments')
+      .withIndex('by_student_course', (q) => q.eq('studentProfileId', studentProfile._id).eq('courseId', assignment.courseId))
+      .unique();
+    if (enrollment?.status !== 'active') throw new ConvexError('You are not enrolled in this assignment course.');
     if (args.size > assignment.maxFileSizeMB * 1024 * 1024) throw new ConvexError('File exceeds assignment size limit.');
 
     const now = Date.now();
     const existing = await ctx.db
       .query('submissions')
-      .withIndex('by_assignment_and_student', (q) => q.eq('assignmentId', args.assignmentId).eq('studentProfileId', studentProfile._id))
+      .withIndex('by_assignment_and_student', (q) => q.eq('assignmentId', assignment._id).eq('studentProfileId', studentProfile._id))
       .unique();
 
     if (existing) {
@@ -112,7 +171,7 @@ export const submit = mutation({
     }
 
     return await ctx.db.insert('submissions', {
-      assignmentId: args.assignmentId,
+      assignmentId: assignment._id,
       studentProfileId: studentProfile._id,
       storageId: args.storageId,
       fileName: args.fileName,
