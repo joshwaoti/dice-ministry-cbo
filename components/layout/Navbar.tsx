@@ -64,13 +64,13 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-3">
             <div className="relative w-10 h-10">
               <Image
-                src={transparentMode ? "/images/Logo-1-White.png" : "/images/Logo-1.png"}
+                src="/images/Website Logo.png"
                 alt="DICE Ministry Logo"
                 fill
                 className="object-contain"
               />
             </div>
-            <span className={cn('font-display font-bold text-xl tracking-tight transition-colors', 
+            <span className={cn('font-dm-serif font-bold text-xl tracking-tight transition-colors', 
               transparentMode ? 'text-white' : 'text-primary'
             )}>
               DICE Ministry CBO

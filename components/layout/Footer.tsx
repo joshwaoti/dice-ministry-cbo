@@ -11,13 +11,13 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-3">
               <div className="relative h-10 w-10">
                 <Image
-                  src="/images/Logo-1-White.png"
+                  src="/images/Website Logo.png"
                   alt="DICE Ministry Logo"
                   fill
                   className="object-contain"
                 />
               </div>
-              <span className="font-display text-xl font-bold tracking-tight">DICE Ministry</span>
+              <span className="font-dm-serif text-xl font-bold tracking-tight">DICE Ministry</span>
             </Link>
             <p className="text-white/70">
               Discipleship In Context of Evangelism. Empowering teenagers and young adults in Kenya to maximize their
@@ -62,17 +62,19 @@ export function Footer() {
           <div className="max-w-sm">
             <h3 className="mb-6 text-lg font-bold text-gold">Contact Info</h3>
             <ul className="space-y-4 text-white/70">
-              <li>Baba Dogo, Kanyoro House</li>
-              <li>3rd Floor, Nairobi</li>
-              <li>P.O. Box 15368-00400</li>
-              <li className="pt-2 text-accent/90 hover:text-accent"><a href="tel:+254725248788">+254 725 248 788</a></li>
+              <li>Kanyoro House, 3rd Floor</li>
+              <li>Along Lucky Summer-Baba Dogo Rd.</li>
+              <li>Near KEMRIF Hospital</li>
+              <li>P.O. Box 15368-00400 Nairobi</li>
+              <li className="pt-2 text-accent/90 hover:text-accent"><a href="tel:+254712878829">+254 712 878829</a></li>
+              <li className="text-accent/90 hover:text-accent"><a href="tel:+254115447886">+254 115 447886</a></li>
               <li className="text-accent/90 hover:text-accent"><a href="mailto:diceministrykenya@gmail.com">diceministrykenya@gmail.com</a></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
-          <p className="text-sm text-white/50">© {new Date().getFullYear()} Ministry CBO. All rights reserved.</p>
+          <p className="text-sm text-white/50">© {new Date().getFullYear()} DICE Ministry CBO. All rights reserved.</p>
           <a
             href="https://otieno.vercel.app"
             target="_blank"

@@ -2,13 +2,6 @@ import testimonialImage from '@/images/dice_II.avif';
 
 export const testimonials = [
   {
-    quote: "This experience has been transformative, challenging, and far more enriching than I ever expected. It built a strong foundation for my faith and gave me practical skills for the future.",
-    punchline: 'It built a strong foundation for my faith and gave me practical skills for the future.',
-    author: 'Daisy Wairimu',
-    cohort: 'SURGE 24',
-    image: testimonialImage,
-  },
-  {
     quote: "I've had one of the best experiences in DICE Ministry. I enjoyed getting to know God more. I've been equipped, transformed, challenged, sharpened, and built up effectively. The training has helped me develop a different perspective of life.",
     punchline: "I've been equipped, transformed, challenged, sharpened, and built up effectively.",
     author: 'Dennis Eshuchi',

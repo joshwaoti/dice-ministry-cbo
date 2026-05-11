@@ -3,7 +3,7 @@ import Image from 'next/image';
 import mauricePhoto from '@/images/diceministry/Maurice Agunda.jpg';
 import christinePhoto from '@/images/diceministry/Christine Sharon.jpg';
 import salimPhoto from '@/images/diceministry/Salim Kwatsima.jpg';
-import rovertPhoto from '@/images/diceministry/Rovert Ochieng.jpg';
+import robertPhoto from '@/images/diceministry/Rovert Ochieng.jpg';
 import faithPhoto from '@/images/diceministry/Faith Mugale.jpg';
 import pstAlbertPhoto from '@/images/diceministry/Pst Albert Shitakwa.jpg';
 import janePhoto from '@/images/diceministry/Jane Watetu.jpg';
@@ -18,7 +18,7 @@ export default function TeamPage() {
     { name: 'Maurice Agunda', role: 'Founder & President', photo: mauricePhoto },
     { name: 'Christine Sharon', role: 'Executive Team Member', photo: christinePhoto },
     { name: 'Salim Kwatsima', role: 'Executive Team Member', photo: salimPhoto },
-    { name: 'Rovert Ochieng', role: 'Executive Team Member', photo: rovertPhoto },
+    { name: 'Robert Ochieng', role: 'Executive Team Member', photo: robertPhoto },
     { name: 'Faith Mugale', role: 'Executive Team Member', photo: faithPhoto },
     { name: 'Pst Albert Shitakwa', role: 'Patron', photo: pstAlbertPhoto },
     { name: 'Jane Watetu', role: 'Discipleship Trainer', photo: janePhoto },

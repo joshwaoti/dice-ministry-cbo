@@ -31,9 +31,9 @@ export function ImpactStats() {
   const isInView = useInView(containerRef, { once: true, margin: "-100px" });
 
   const stats = [
-    { value: 17, suffix: '+', label: 'Years Active', icon: CalendarDays },
-    { value: 500, suffix: '+', label: 'Students Trained', icon: Users },
-    { value: 5, suffix: '+', label: 'Partner Organizations', icon: HandHeart },
+    { value: 18, suffix: '+', label: 'Years Active', icon: CalendarDays },
+    { value: 150, suffix: '+', label: 'Students Trained', icon: Users },
+    { value: 3, suffix: '+', label: 'Partner Organizations', icon: HandHeart },
     { value: 3, suffix: '+', label: 'Programs Running', icon: GraduationCap },
   ];
 

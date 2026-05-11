@@ -107,7 +107,7 @@ export default function PostLoginPage() {
       <div className="max-w-md">
         <div className="relative mx-auto mb-5 h-12 w-12">
           <Image
-            src="/images/Logo-1.png"
+            src="/images/Website Logo.png"
             alt="DICE Ministry Logo"
             fill
             className="object-contain"

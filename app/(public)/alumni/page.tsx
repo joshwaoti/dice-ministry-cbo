@@ -2,47 +2,20 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import { AlumniCard } from '@/components/public/AlumniCard';
 import { AlumniStoryForm } from '@/components/public/AlumniStoryForm';
+import { testimonials } from '@/components/home/testimonials';
 import alumniHero from '@/images/diceministry/work (1).avif';
-import daisyImage from '@/images/diceministry/Jane Watetu.jpg';
-import markImage from '@/images/diceministry/Maurice Agunda.jpg';
-import sarahImage from '@/images/diceministry/Christine Sharon.jpg';
-import johnImage from '@/images/diceministry/Salim Kwatsima.jpg';
 
 export const metadata: Metadata = {
   title: 'Our Alumni | DICE Ministry',
 };
 
-const alumniData = [
-  {
-    name: 'Daisy Wairimu',
-    cohort: 'SURGE 24',
-    update: 'Now studying at University of Nairobi',
-    quote: 'This experience has been transformative, challenging, and far more enriching than I ever expected. It built a strong foundation for my faith and gave me practical skills for the future.',
-    image: daisyImage
-  },
-  {
-    name: 'Mark Omondi',
-    cohort: 'Ignite 2023',
-    update: 'Started a tech business in Nairobi',
-    quote: 'Through the Ignite program, I discovered my true calling. The mentorship and guidance provided by the leaders here gave me clarity in a world full of noise.',
-    image: markImage
-  },
-  {
-    name: 'Sarah Muthoni',
-    cohort: 'SURGE 24',
-    update: 'Volunteering with a local NGO',
-    quote: 'The community I found here has become like family. Never have I felt so supported, spiritually fed, and equipped to face the challenges of university life.',
-    image: sarahImage
-  },
-  {
-    name: 'John Kamau',
-    cohort: 'Ignite 2022',
-    update: 'Pursuing a degree in Economics',
-    quote: 'More stories coming soon...',
-    image: johnImage,
-    placeholder: true
-  }
-];
+const alumniData = testimonials.map((t) => ({
+  name: t.author,
+  cohort: t.cohort,
+  quote: t.quote,
+  image: typeof t.image === 'string' ? t.image : (t.image as any)?.src || '/images/dice_II.avif',
+  update: 'Alumni updates coming soon...',
+}));
 
 export default function AlumniPage() {
   return (

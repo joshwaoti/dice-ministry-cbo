@@ -18,6 +18,8 @@
 
   --font-sans: var(--font-jakarta);
   --font-display: var(--font-space);
+  --font-outfit: var(--font-outfit);
+  --font-dm-serif: var(--font-dm-serif);
 }
 
 :root {

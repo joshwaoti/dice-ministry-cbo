@@ -29,7 +29,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex items-center gap-3 p-6">
           <div className="relative h-10 w-10">
             <Image
-              src="/images/Logo-1-White.png"
+              src="/images/Website Logo.png"
               alt="DICE Ministry Logo"
               fill
               className="object-contain"
@@ -69,7 +69,7 @@ export default function LoginPage() {
           <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
             <div className="relative h-10 w-10">
               <Image
-                src="/images/Logo-1.png"
+                src="/images/Website Logo.png"
                 alt="DICE Ministry Logo"
                 fill
                 className="object-contain"

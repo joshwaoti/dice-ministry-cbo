@@ -74,7 +74,7 @@ export function TestimonialSection() {
                 ))}
               </div>
 
-              <blockquote className="text-2xl md:text-3xl lg:text-4xl font-display font-medium text-primary leading-tight mb-12">
+              <blockquote className="text-xl md:text-2xl lg:text-3xl font-outfit font-medium text-primary leading-tight mb-12">
                 &quot;{testimonials[index].quote}&quot;
               </blockquote>
 

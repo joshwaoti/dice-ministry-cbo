@@ -47,7 +47,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
         <div className="flex items-center gap-3">
           <div className="relative w-8 h-8">
             <Image
-              src="/images/Logo-1-White.png"
+              src="/images/Website Logo.png"
               alt="DICE Ministry Logo"
               fill
               className="object-contain"
@@ -112,7 +112,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
          <div className="flex items-center gap-3">
           <div className="relative w-8 h-8">
             <Image
-              src="/images/Logo-1-White.png"
+              src="/images/Website Logo.png"
               alt="DICE Ministry Logo"
               fill
               className="object-contain"

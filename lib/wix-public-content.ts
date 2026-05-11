@@ -2,9 +2,9 @@ import type { StaticImageData } from 'next/image';
 
 import aboutStoryImage from '@/images/diceministry/story.avif';
 import aboutHeroImage from '@/images/diceministry/maurice-story.avif';
-import historyLeadImage from '@/images/diceministry/history-1 (1).avif';
+import historyLeadImage from '@/images/diceministry/history-1 (3).avif';
 import historyBaptistImage from '@/images/diceministry/history-1 (2).avif';
-import historyHighSchoolImage from '@/images/diceministry/history-1 (3).avif';
+import historyHighSchoolImage from '@/images/diceministry/history-1 (1).avif';
 import historyGalleryOneA from '@/images/diceministry/history-1 (1).avif';
 import historyGalleryOneB from '@/images/diceministry/history-1 (2).avif';
 import historyGalleryOneC from '@/images/diceministry/history-1 (3).avif';
@@ -17,6 +17,7 @@ import ourWorkIgniteImage from '@/images/diceministry/Edit-171_edited.jpg';
 import igniteLeadImage from '@/images/diceministry/ignite.webp';
 import igniteMentoringImage from '@/images/diceministry/peer-mentoring-practical-life-skills.avif';
 import igniteComputerImage from '@/images/diceministry/basic-computer-skills.avif';
+import igniteDiscipleshipImage from '@/images/diceministry/discipleship-foundation.avif';
 import supportLeadImage from '@/images/diceministry/010ba8_40d213f48508494cbb7ee327d19ce366~mv2.jpg';
 import contactHeroImage from '@/images/diceministry/contact (1).avif';
 import contactLeadImage from '@/images/diceministry/contact (2).avif';
@@ -130,7 +131,7 @@ export const wixPublicContent = {
       },
       {
         title: 'Ignite (formerly SURGE)',
-        body: 'A 6-month discipleship & mentorship program for high school graduates. Our students are trained in Discipleship & Evangelism, Peer Education & Life Skills, and Basic Computer Skills.',
+        body: 'A 6-month discipleship & mentorship program for high school graduates. Our students are trained in Discipleship & Evangelism, Peer Education & Life Skills, and Digital Literacy.',
         image: ourWorkIgniteImage,
       },
     ],
@@ -142,13 +143,14 @@ export const wixPublicContent = {
     overview: [
       'IGNITE is a 6-month fully-sponsored program designed to equip recent high school graduates for success in campus life, community involvement, or the marketplace. The program focuses on empowering young people to deepen their relationship with God, establish a strong foundation for their future, identify their unique gifts and calling, and develop essential leadership skills.',
       'At the heart of IGNITE is the practice of spending daily time alone with God, combined with weekly experiences of prayer, Bible study, and worship. Participants are also challenged through life-changing activities that push them beyond their comfort zones. Additionally, they have the chance to engage with guest speakers from diverse professional backgrounds, gaining valuable insights into various fields.',
-      'A typical IGNITE session includes lectures on Discipleship Foundations, Peer Mentoring & Practical Life Skills, and Basic Computer Skills.',
+      'A typical IGNITE session includes lectures on Discipleship Foundations, Peer Mentoring & Practical Life Skills, and Digital Literacy.',
       'Ultimately, IGNITE aims to cultivate a generation that is godly, empowered, and skillful - transforming learning into real-life application and impact.',
     ],
     courses: [
       {
         title: 'Discipleship Foundations',
         body: 'Covers basic concepts on cultivating our relationship with God and discipleship concepts.',
+        image: igniteDiscipleshipImage,
       },
       {
         title: 'Peer Mentoring & Practical Life Skills',
@@ -156,7 +158,7 @@ export const wixPublicContent = {
         image: igniteMentoringImage,
       },
       {
-        title: 'Basic Computer Skills',
+        title: 'Digital Literacy',
         body: 'Covers eight basic Microsoft Office packages that prepare students for academic and workplace demands.',
         image: igniteComputerImage,
       },
@@ -209,11 +211,11 @@ export const wixPublicContent = {
     details: [
       {
         title: 'Address',
-        body: 'Baba Dogo - Lucky Summer Road\nKanyoro House (opp. The Oasis Gym), 3rd Floor',
+        body: 'Kanyoro House, 3rd Floor\nAlong Lucky Summer-Baba Dogo Rd.\nNear KEMRIF Hospital',
       },
       {
         title: 'Phone numbers',
-        body: '+254 725 248 788\n+254 115 447 886',
+        body: '+254 712 878829\n+254 115 447886',
       },
       {
         title: 'Email',
