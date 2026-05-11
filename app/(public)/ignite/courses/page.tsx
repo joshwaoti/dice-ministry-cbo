@@ -12,27 +12,34 @@ export const metadata: Metadata = {
 export default function CourseLibraryPage() {
   const courses = [
     { 
-      title: "Discipleship 101", 
-      desc: "Understanding the foundations of faith.", 
+      title: "Discipleship Foundations", 
+      tagline: "Understanding the foundations of faith.",
       modules: [
-        { title: "Introduction to Faith", units: ["What is Faith?", "The Grace of God", "Repentance", "Assignment: Reflection"] },
-        { title: "The Bible", units: ["How to Read the Bible", "Old Testament Overview", "New Testament Overview"] }
+        { title: "Foundations of Salvation & Identity in Christ", units: ["Understanding Salvation", "Identity in Christ", "Grace & Faith", "Repentance & Baptism", "Living as a Child of God"] },
+        { title: "Spiritual Growth & Disciplines", units: ["Prayer as Communication", "Bible Study Methods", "Fasting & Worship", "Meditation on Scripture", "Personal Devotions", "Accountability Partnerships", "Spiritual Journaling"] },
+        { title: "The Holy Spirit & Spiritual Maturity", units: ["The Person of the Holy Spirit", "The Gifts of the Holy Spirit", "Walking in the Spirit", "Fruit of the Spirit"] },
+        { title: "Evangelism & Discipleship", units: ["Sharing Your Testimony", "The Gospel Message", "Making Disciples"] },
+        { title: "Christian Community & Church Life", units: ["The Body of Christ", "Serving in the Church"] }
       ]
     },
     { 
-      title: "Career Guidance", 
-      desc: "Navigating choices and discovering purpose.", 
+      title: "Peer Mentoring & Practical Life Skills", 
+      tagline: "Navigating choices and discovering purpose.",
       modules: [
-        { title: "Discovering Gifts", units: ["Spiritual Gifts", "Talents & Skills", "Personality Tests"] },
-        { title: "Practical Steps", units: ["CV Writing", "Interview Skills", "Workplace Ethics"] }
+        { title: "Self-awareness & Personal Growth", units: ["Understanding Your Personality", "Strengths & Weaknesses", "Emotional Intelligence", "Goal Setting", "Personal Values"] },
+        { title: "Social Influence & Healthy Living", units: ["Peer Pressure & Choices", "Healthy Habits", "Mental Wellness"] },
+        { title: "Foundations of Relationships", units: ["Types of Relationships", "Communication Skills", "Conflict Resolution", "Boundaries in Relationships", "Trust & Vulnerability", "Friendship vs Romance", "toxic Relationships"] },
+        { title: "Intentional Dating & Relationship Decisions", units: ["Dating with Purpose", "Courtship Principles", "Red Flags in Dating", "Breaking Up Well", "Waiting for Marriage"] },
+        { title: "Sexual Purity & Godly Relationships", units: ["God's Design for Sexuality", "Purity in Thought & Action", "Marriage Preparation"] }
       ]
     },
     { 
       title: "Digital Literacy", 
-      desc: "Essential computer skills.", 
+      tagline: "Digital Skills for Everyday Success.",
       modules: [
-        { title: "Computer Basics", units: ["Hardware vs Software", "Operating Systems", "File Management"] },
-        { title: "Office Suite", units: ["Word Processing", "Spreadsheets", "Presentations"] }
+        { title: "Digital Literacy Foundations", units: ["Computer Basics", "Internet Safety", "Email & Communication"] },
+        { title: "Office Productivity Tools", units: ["Word Processing", "Spreadsheets & Data", "Presentations"] },
+        { title: "Data & Publication Tools", units: ["Document Formatting", "Basic Design Tools"] }
       ]
     },
   ];
@@ -44,14 +51,14 @@ export default function CourseLibraryPage() {
         <p className="text-xl text-muted max-w-2xl mx-auto">A look inside our 6-month discipleship program.</p>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {courses.map((c) => (
-          <Card key={c.title} className="flex flex-col border-border/60 shadow-sm hover:shadow-md transition-shadow h-full">
-            <CardContent className="p-8 flex-1 flex flex-col">
+          <Card key={c.title} className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-8">
               <CardTitle className="text-2xl mb-3 font-display text-primary">{c.title}</CardTitle>
-              <p className="text-muted flex-grow mb-8">{c.desc}</p>
+              <p className="text-muted mb-8">{c.tagline}</p>
               
-              <div className="mb-8 flex-1">
+              <div className="mb-8">
                 <Accordion className="w-full">
                   {c.modules.map((m, idx) => (
                     <AccordionItem key={idx} value={`item-${idx}`} className="border-border">
@@ -76,7 +83,7 @@ export default function CourseLibraryPage() {
                 </Accordion>
               </div>
 
-              <div className="pt-6 border-t border-border mt-auto">
+              <div className="pt-6 border-t border-border">
               <Button asChild className="w-full bg-[#F6AC55] font-bold text-white hover:bg-[#F6AC55]/90" size="lg">
                   <Link href="/apply">Enroll in Ignite</Link>
                 </Button>
